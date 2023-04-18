@@ -1,111 +1,19 @@
-import { program } from 'commander';
 import * as fs from 'fs/promises';
-import { exec } from 'child_process';
+import { existsSync } from 'fs';
 import inquirer from 'inquirer';
-import Ajv, { JSONSchemaType } from 'ajv';
-import { homedir } from 'os';
-import path from 'path';
-
-interface Server {
-    name: string;
-    uri: string;
-    delay?: number;
-}
-
-interface Configuration {
-    subscribe: string;
-    'servers.user': Server[];
-    'servers.sub': Server[];
-    server: string;
-}
-
-const schema: JSONSchemaType<Configuration> = {
-    type: 'object',
-    properties: {
-        subscribe: {
-            type: 'string',
-            default: 'https://raw.fastgit.org/freefq/free/master/v2',
-        },
-        'servers.user': {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    name: {
-                        type: 'string',
-                    },
-                    uri: {
-                        type: 'string',
-                    },
-                    delay: {
-                        type: 'number',
-                        nullable: true,
-                    },
-                },
-                required: ['name', 'uri'],
-            },
-            default: [],
-        },
-        'servers.sub': {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    name: {
-                        type: 'string',
-                    },
-                    uri: {
-                        type: 'string',
-                    },
-                    delay: {
-                        type: 'number',
-                        nullable: true,
-                    },
-                },
-                required: ['name', 'uri'],
-            },
-            default: [],
-        },
-        server: {
-            type: 'string',
-            default: '',
-        },
-    },
-    required: ['subscribe', 'servers.user', 'servers.sub', 'server'],
-};
-
-const validate = new Ajv({
-    useDefaults: true,
-    removeAdditional: true,
-    coerceTypes: true,
-}).compile(schema);
-
-const cfgfile = path.resolve(homedir(), '.yar2v.json');
-// @ts-ignore
-let config: Configuration = {};
-
-program.option('--v2ray <string>', 'v2ray command', 'v2ray');
-program.parse();
-const opts = program.opts();
-const v2ray = opts.config;
-
-async function saveConfig() {
-    await fs.writeFile(cfgfile, JSON.stringify(config));
-}
-
-async function execV2ray(
-    ...params: string[]
-): Promise<{ stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-        exec(v2ray + ' ' + params.join(' '), (err, stdout, stderr) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve({ stdout, stderr });
-            }
-        });
-    });
-}
+import { DataDir } from './constants';
+import { getAllServers, getConfig, loadConfig } from './config';
+import {
+    pingServers,
+    selectServer,
+    startPingTimer,
+    startSubTimer,
+    stopPingTimer,
+    stopSubTimer,
+    stopV2ray,
+    updateSubServers,
+    v2rayIsRunning,
+} from './task';
 
 async function selectAction() {
     const answers = await inquirer.prompt([
@@ -115,19 +23,15 @@ async function selectAction() {
             type: 'rawlist',
             choices: [
                 {
+                    name: 'Choose server',
+                    value: 'servers',
+                },
+                {
                     name: 'Running status',
                     value: 'status',
                 },
                 {
-                    name: 'Show all servers',
-                    value: 'servers',
-                },
-                {
-                    name: 'Select server',
-                    value: 'select-server',
-                },
-                {
-                    name: 'Pull from subscriber',
+                    name: 'Update subscribe',
                     value: 'subscribe',
                 },
                 {
@@ -135,39 +39,136 @@ async function selectAction() {
                     value: 'ping',
                 },
                 {
-                    name: 'Exit',
-                    value: 'exit',
+                    name: 'Proxy Address',
+                    value: 'proxy',
+                },
+                {
+                    name: 'Stop v2ray',
+                    value: 'stop-v2ray',
                 },
             ],
         },
     ]);
-    console.log(answers);
     switch (answers.action) {
         case 'status':
+            if (v2rayIsRunning()) {
+                console.log('V2ray is running');
+            } else {
+                console.log('V2ray is stopped');
+            }
+            break;
         case 'servers':
-        case 'select-server':
+            await chooseServer();
+            break;
         case 'subscribe':
+            stopSubTimer();
+            try {
+                const list = await updateSubServers();
+                if (list) {
+                    list.forEach((item) => {
+                        console.log(item);
+                    });
+                }
+            } catch (e) {
+                console.error(e.message);
+            }
+            startSubTimer();
+            await chooseServer();
+            break;
         case 'ping':
-        case 'exit':
+            stopPingTimer();
+            try {
+                await pingServers();
+            } catch (e) {
+                console.error(e);
+            }
+            startPingTimer();
+            await chooseServer();
+            break;
+        case 'proxy':
+            const httpHost = getConfig('local.http.host');
+            const httpPort = getConfig('local.http.port');
+            const sockHost = getConfig('local.sock.host');
+            const sockPort = getConfig('local.sock.port');
+            console.log(
+                `export http_proxy=http://${httpHost}:${httpPort});export https_proxy=http://${httpHost}:${httpPort});export ALL_PROXY=socks5://${sockHost}:${sockPort}`
+            );
+            break;
+        case 'stop-v2ray':
+            try {
+                stopV2ray();
+            } catch (e) {
+                console.error(e.message);
+            }
+            break;
         default:
             console.error(`Invalid Action: ${answers.action}`);
     }
 }
 
-(async () => {
-    let stat = await fs.stat(cfgfile).catch(() => null);
-    if (stat && stat.isFile()) {
-        const content = (await fs.readFile(cfgfile)).toString();
-        const data = JSON.parse(content);
-        if (!validate(data)) {
-            throw new Error(JSON.stringify(validate.errors));
+async function chooseServer() {
+    const { userServers, subServers } = getAllServers();
+    const userServerLen = userServers.length;
+    const choices: { name: string; value: string }[] = [
+        ...userServers,
+        ...subServers,
+    ].map((server, idx) => ({
+        name: [
+            idx < userServerLen ? 'U' : 'S',
+            (server.delay ? server.delay : -1).toString().padStart(5, ' ') +
+                'ms',
+            server.name,
+        ].join(' '),
+        value: server.id,
+    }));
+    choices.push({ name: 'Back', value: '' });
+    const answers = await inquirer.prompt([
+        {
+            name: 'server',
+            message: 'Choose server',
+            type: 'rawlist',
+            choices,
+        },
+    ]);
+    if (answers.server) {
+        try {
+            await selectServer(answers.server);
+        } catch (e) {
+            console.error(e);
         }
-        config = data;
-    } else {
-        validate(config);
-        await saveConfig();
+    }
+}
+
+(async () => {
+    if (!existsSync(DataDir) || !(await fs.stat(DataDir)).isDirectory()) {
+        await fs.mkdir(DataDir, { recursive: true });
+    }
+    await loadConfig();
+    startSubTimer();
+    startPingTimer();
+    const sid = getConfig('server');
+    if (sid) {
+        try {
+            await selectServer(sid);
+            console.log('V2ray started');
+        } catch (e) {
+            console.error(e);
+        }
     }
 
-    await selectAction();
+    process.on('SIGINT', () => {
+        console.log('Bye Bye');
+        try {
+            stopV2ray();
+            process.exit();
+        } catch (e) {
+            console.error(e.toString());
+        }
+    });
+
+    while (true) {
+        await selectAction();
+        console.log('\n');
+    }
 })();
 

@@ -1,278 +1,50 @@
-interface VMessOutbound {
-    vnext: {
-        address: string;
-        port: number;
-        users: {
-            id: string;
-            alterId: number;
-            security:
-                | 'aes-128-gcm'
-                | 'chacha20-poly1305'
-                | 'auto'
-                | 'none'
-                | 'zero';
-            level: number;
-        }[];
-    }[];
+import logger from './logger';
+
+function parseVmess(url: string): { name: string; ob: Outbound } {
+    logger.info(`Parse vmess: ${url}`);
+    const json = Buffer.from(url.slice(8), 'base64').toString();
+    const data = JSON.parse(json);
+    logger.debug(data);
+    let name = 'Untitle';
+    if (data.ps) {
+        name = data.ps;
+    }
+    const ob: Outbound = {
+        protocol: 'vmess',
+        settings: {
+            vnext: [
+                {
+                    address: data.add,
+                    port: +data.port,
+                    users: [
+                        {
+                            id: data.id,
+                            alterId: +data.aid,
+                            security: data.scy ? data.scy : 'auto',
+                        },
+                    ],
+                },
+            ],
+        },
+        streamSettings: {
+            network: data.net,
+            security: data.tls === 'tls' ? 'tls' : 'none',
+            tlsSettings:
+                data.tls === 'tls'
+                    ? {
+                          serverName: data.sni ? data.sni : data.host,
+                          alpn: data.alpn ? data.alpn.split(',') : [],
+                          allowInsecure: data.allowInsecure ?? true,
+                      }
+                    : undefined,
+        },
+    };
+    return { name, ob };
 }
 
-interface VMessInbound {
-    clients: {
-        id: string;
-        level: number;
-        alterId: number;
-        email: string;
-    }[];
-    default: {
-        level: number;
-        alterId: number;
-    };
-    detour: {
-        to: string;
-    };
-    disableInsecureEncryption: false;
-}
-
-interface StreamSettings {
-    network: 'tcp' | 'kcp' | 'ws' | 'http' | 'domainsocket' | 'quic' | 'grpc';
-    security: 'none' | 'tls';
-    tlsSettings: {
-        serverName: string;
-        alpn: string[];
-        allowInsecure: boolean;
-        disableSystemRoot: boolean;
-        certificates: {
-            usage: 'encipherment' | 'verify' | 'issue' | 'verifyclient';
-            certificateFile: string;
-            keyFile: string;
-            certificate: string[];
-            key: string[];
-        }[];
-        verifyClientCertificate: boolean;
-        pinnedPeerCertificateChainSha256: string;
-    };
-    tcpSettings: {
-        acceptProxyProtocol: boolean;
-        header:
-            | { type: 'none' }
-            | {
-                  type: 'http';
-                  request: {
-                      version: string;
-                      method: string;
-                      path: string[];
-                      headers: Record<string, string | string[]>;
-                  };
-                  response: {
-                      version: string;
-                      status: string;
-                      reason: string;
-                      headers: Record<string, string | string[]>;
-                  };
-              };
-    };
-    kcpSettings: {
-        mtu: number;
-        tti: number;
-        uplinkCapacity: number;
-        downlinkCapacity: number;
-        congestion: boolean;
-        readBufferSize: number;
-        writeBufferSize: number;
-        header: {
-            type:
-                | 'none'
-                | 'srtp'
-                | 'utp'
-                | 'wechat-video'
-                | 'dtls'
-                | 'wireguard';
-        };
-        seed: string;
-    };
-    wsSettings: {
-        acceptProxyProtocol: boolean;
-        path: string;
-        headers: Record<string, string>;
-        maxEarlyData: number;
-        useBrowserForwarding: boolean;
-        earlyDataHeaderName: string;
-    };
-    httpSettings: {
-        host: string[];
-        path: string;
-        method: string;
-        headers: Record<string, string[]>;
-    };
-    quicSettings: {
-        security: 'none' | 'aes-128-gcm' | 'chacha20-poly1305';
-        key: string;
-        header: {
-            type:
-                | 'none'
-                | 'srtp'
-                | 'utp'
-                | 'wechat-video'
-                | 'dtls'
-                | 'wireguard';
-        };
-    };
-    dsSettings: {
-        path: string;
-        abstract: boolean;
-        padding: boolean;
-    };
-    grpcSettings: {
-        serviceName: string;
-    };
-    sockopt: {
-        mark: number;
-        tcpFastOpen: boolean;
-        tcpFastOpenQueueLength: number;
-        tproxy: 'redirect' | 'tproxy' | 'off';
-        tcpKeepAliveInterval: number;
-    };
-}
-
-interface Inbound {
-    listen: string;
-    port: number | string;
-    protocol: string;
-    settings: VMessInbound;
-    streamSettings: StreamSettings;
-    tag: string;
-    sniffing: {
-        enabled: boolean;
-        destOverride: (
-            | 'http'
-            | 'tls'
-            | 'quic'
-            | 'fakedns'
-            | 'fakedns+others'
-        )[];
-        metadataOnly: boolean;
-    };
-    allocate: {
-        strategy: 'always' | 'random';
-        refresh: number;
-        concurrency: number;
-    };
-}
-
-interface Outbound {
-    protocol: string;
-    settings: VMessOutbound;
-    sendThrough?: string;
-    tag?: string;
-    streamSettings?: StreamSettings;
-    proxySettings?: {
-        tag: string;
-        transportLayer: boolean;
-    };
-    mux?: {
-        enabled: boolean;
-        concurrency: number;
-    };
-}
-
-interface V2rayConfig {
-    log: {
-        access: string;
-        error: string;
-        loglevel: 'debug' | 'info' | 'warning' | 'error' | 'none';
-    };
-    api?: {
-        tag: string;
-        services: string[];
-    };
-    dns?: {};
-    routing?: {
-        domainStrategy: 'AsIs';
-        domainMatcher: 'mph';
-        rules: {
-            domainMatcher: 'linear' | 'mph';
-            type: 'field';
-            domains: string[];
-            ip: string[];
-            port: number | string;
-            sourcePort: number | string;
-            network: 'tcp' | 'udp' | 'tcp,udp';
-            source: string[];
-            user: string[];
-            inboundTag: string[];
-            protocol: ('http' | 'tls' | 'bittorrent')[];
-            attrs: string;
-            outboundTag: string;
-            balancerTag: string;
-        }[];
-        balancers: {
-            tag: string;
-            selector: string[];
-            strategy: {
-                type: 'random' | 'leastPing';
-            };
-        }[];
-    };
-    policy?: {
-        levels: Record<
-            string,
-            {
-                handshake: number;
-                connIdle: number;
-                uplinkOnly: number;
-                downlinkOnly: number;
-                statsUserUplink: boolean;
-                statsUserDownlink: boolean;
-                bufferSize: number;
-            }
-        >;
-        system: {
-            statsInboundUplink: boolean;
-            statsInboundDownlink: boolean;
-            statsOutboundUplink: boolean;
-            statsOutboundDownlink: boolean;
-        };
-    };
-    inbounds: Inbound[];
-    outbounds: Outbound[];
-    transport?: Pick<
-        StreamSettings,
-        | 'tcpSettings'
-        | 'kcpSettings'
-        | 'wsSettings'
-        | 'httpSettings'
-        | 'quicSettings'
-        | 'dsSettings'
-        | 'grpcSettings'
-    >;
-    stats?: {};
-    reverse?: {
-        bridges: {
-            tag: string;
-            domain: string;
-        }[];
-        portals: {
-            tag: string;
-            domain: string;
-        }[];
-    };
-    fakedns?: {
-        ipPool: string;
-        poolSize: number;
-    }[];
-    browserForwarder?: {
-        listenAddr: string;
-        listenPort: number;
-    };
-    observatory?: {
-        subjectSelector: string[];
-        probeURL: string;
-        probeInterval: string;
-    };
-}
-
-export function str2json(url: string): V2rayConfig {
+export function parseURL(url: string): V2rayConfig | undefined {
     const cfg: V2rayConfig = {
+        name: '',
         log: {
             access: '',
             error: '',
@@ -280,43 +52,47 @@ export function str2json(url: string): V2rayConfig {
         },
         inbounds: [],
         outbounds: [],
-        transport: undefined,
     };
     if (url.startsWith('vmess://')) {
-        const json = Buffer.from(url.slice(8)).toString();
-        const data = JSON.parse(json);
-        const ob: Outbound = {
-            protocol: '',
-            sendThrough: '0.0.0.0',
-            settings: {
-                vnext: [
-                    {
-                        address: data.add,
-                        port: data.port,
-                        users: [
-                            {
-                                id: data.id,
-                                alterId: data.aid,
-                                security: data.scy,
-                                level: 0,
-                            },
-                        ],
-                    },
-                ],
-            },
-        };
-        switch (data.net) {
-            case 'tcp':
-            case 'kcp':
-            case 'ws':
-            case 'h2':
-            case 'quic':
-            default:
-                throw new Error(`Invalid net: ${data.net}`);
-        }
-    } else {
-        throw new Error(`Unsupport or Invalid URI: ${url}`);
+        const { name, ob } = parseVmess(url);
+        cfg.name = name;
+        cfg.outbounds.push(ob);
+    } else if (url.startsWith('trojan://')) {
+        logger.info('Ignore trojan://');
+        return;
+    } else if (url.startsWith('vless://')) {
+        logger.info('Ingore vless://');
+        return;
+    } else if (url.startsWith('ss://')) {
+        logger.info('Ignore ss://');
+        return;
+    } else if (url.startsWith('ssr://')) {
+        return;
+    }
+    if (!cfg.name) {
+        cfg.name = cfg.outbounds[0].settings.vnext[0].address;
     }
     return cfg;
+}
+
+export function setInbounds(
+    cfg: V2rayConfig,
+    httpHost: string,
+    httpPort: number,
+    sockHost: string,
+    sockPort: number
+) {
+    cfg.inbounds = [
+        {
+            protocol: 'http',
+            listen: httpHost,
+            port: httpPort,
+        },
+        {
+            protocol: 'socks',
+            listen: sockHost,
+            port: sockPort,
+        },
+    ];
 }
 

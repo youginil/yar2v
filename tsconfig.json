@@ -4,7 +4,7 @@
             "es2020"
         ],
         "module": "esnext",
-        "target": "es2020",
+        "target": "esnext",
         "strictNullChecks": true,
         "esModuleInterop": true,
         "moduleResolution": "node",
@@ -12,8 +12,5 @@
     },
     "include": [
         "src/**/*"
-    ],
-    "ts-node": {
-        "esm": true
-    }
+    ]
 }

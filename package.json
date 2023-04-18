@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "dev": "ts-node src/main.ts"
+        "dev": "node dist/main.js",
+        "build": "rollup -c rollup.config.js"
     },
     "type": "module",
     "repository": {
@@ -21,16 +22,19 @@
     },
     "homepage": "https://github.com/youginil/yar2v#readme",
     "devDependencies": {
+        "@rollup/plugin-typescript": "^11.1.0",
         "@types/inquirer": "^9.0.3",
         "@types/node": "^18.15.11",
+        "@types/ping": "^0.4.1",
         "prettier": "^2.8.7",
-        "ts-node": "^10.9.1",
+        "rollup": "^3.20.5",
         "typescript": "^5.0.4"
     },
     "dependencies": {
         "ajv": "^8.12.0",
-        "commander": "^10.0.1",
-        "inquirer": "^9.1.5"
+        "axios": "^1.3.5",
+        "inquirer": "^9.1.5",
+        "ping": "^0.4.4",
+        "winston": "^3.8.2"
     }
 }
-
