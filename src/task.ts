@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import axios from 'axios';
 import ping from 'ping';
-import { getAllServers, getConfig, saveConfig } from './config';
+import { getAllServers, getConfig, saveConfig, setConfig } from './config';
 import { parseURL, setInbounds } from './formats';
 import logger from './logger';
 import { DataDir } from './constants';
@@ -265,6 +265,7 @@ export async function selectServer(id: string) {
                     getConfig('local.sock.port')
                 );
                 await fs.writeFile(v2config, JSON.stringify(cfg));
+                await setConfig('server', id);
                 stopV2ray(true);
                 return;
             }
