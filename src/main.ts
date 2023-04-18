@@ -14,6 +14,7 @@ import {
     updateSubServers,
     v2rayIsRunning,
 } from './task';
+import { setLoggerLevel } from './logger';
 
 async function selectAction() {
     const answers = await inquirer.prompt([
@@ -142,6 +143,8 @@ async function chooseServer() {
     await loadConfig();
     startSubTimer();
     startPingTimer();
+    setLoggerLevel(getConfig('log.level'));
+
     const sid = getConfig('server');
     if (sid) {
         try {

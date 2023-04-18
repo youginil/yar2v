@@ -19,6 +19,23 @@ interface Configuration {
     'log.level': string;
 }
 
+interface VMessInbound {
+    clients: {
+        id: string;
+        level: number;
+        alterId: number;
+        email: string;
+    }[];
+    default: {
+        level: number;
+        alterId: number;
+    };
+    detour: {
+        to: string;
+    };
+    disableInsecureEncryption: false;
+}
+
 interface VMessOutbound {
     vnext: {
         address: string;
@@ -37,21 +54,28 @@ interface VMessOutbound {
     }[];
 }
 
-interface VMessInbound {
+interface TrojanInbound {
     clients: {
-        id: string;
-        level: number;
-        alterId: number;
+        password: string;
         email: string;
-    }[];
-    default: {
         level: number;
-        alterId: number;
-    };
-    detour: {
-        to: string;
-    };
-    disableInsecureEncryption: false;
+    }[];
+    fallbacks: {
+        alpn: string;
+        path: string;
+        dest: number;
+        xver: number;
+    }[];
+}
+
+interface TrojaOutbound {
+    servers: {
+        address: string;
+        port: number;
+        password: string;
+        email?: string;
+        level?: number;
+    }[];
 }
 
 interface StreamSettings {
@@ -166,7 +190,7 @@ interface Inbound {
         | 'shadowsocks'
         | 'trojan'
         | 'vless';
-    settings?: VMessInbound;
+    settings?: VMessInbound | TrojanInbound;
     streamSettings?: StreamSettings;
     tag?: string;
     sniffing?: {
@@ -199,7 +223,7 @@ interface Outbound {
         | 'trojan'
         | 'vless'
         | 'loopback';
-    settings: VMessOutbound;
+    settings: VMessOutbound | TrojaOutbound;
     sendThrough?: string;
     tag?: string;
     streamSettings?: StreamSettings;
@@ -214,7 +238,8 @@ interface Outbound {
 }
 
 interface V2rayConfig {
-    name: string; // custom
+    name: string;
+    host: string;
     log: {
         access: string;
         error: string;

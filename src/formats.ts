@@ -1,13 +1,13 @@
-import logger from './logger';
+type Parser = (url: string) => { name: string; host: string; ob: Outbound };
 
-function parseVmess(url: string): { name: string; ob: Outbound } {
-    logger.info(`Parse vmess: ${url}`);
+const parseVmess: Parser = (url: string) => {
     const json = Buffer.from(url.slice(8), 'base64').toString();
     const data = JSON.parse(json);
-    logger.debug(data);
-    let name = 'Untitle';
+    let name = '';
     if (data.ps) {
         name = data.ps;
+    } else {
+        name = data.add;
     }
     const ob: Outbound = {
         protocol: 'vmess',
@@ -39,12 +39,35 @@ function parseVmess(url: string): { name: string; ob: Outbound } {
                     : undefined,
         },
     };
-    return { name, ob };
-}
+    return { name, host: data.add, ob };
+};
+
+const parseTrojan: Parser = (url: string) => {
+    const uo = new URL(url);
+    const name = uo.hash ? decodeURIComponent(uo.hash.slice(1)) : uo.hostname;
+    const ob: Outbound = {
+        protocol: 'trojan',
+        settings: {
+            servers: [
+                { address: uo.hostname, port: +uo.port, password: uo.username },
+            ],
+        },
+    };
+    return { name, host: uo.hostname, ob };
+};
+
+const parsers: {
+    prefix: string;
+    parser: (url: string) => { name: string; host: string; ob: Outbound };
+}[] = [
+    { prefix: 'vmess://', parser: parseVmess },
+    { prefix: 'trojan://', parser: parseTrojan },
+];
 
 export function parseURL(url: string): V2rayConfig | undefined {
     const cfg: V2rayConfig = {
         name: '',
+        host: '',
         log: {
             access: '',
             error: '',
@@ -53,26 +76,16 @@ export function parseURL(url: string): V2rayConfig | undefined {
         inbounds: [],
         outbounds: [],
     };
-    if (url.startsWith('vmess://')) {
-        const { name, ob } = parseVmess(url);
-        cfg.name = name;
-        cfg.outbounds.push(ob);
-    } else if (url.startsWith('trojan://')) {
-        logger.info('Ignore trojan://');
-        return;
-    } else if (url.startsWith('vless://')) {
-        logger.info('Ingore vless://');
-        return;
-    } else if (url.startsWith('ss://')) {
-        logger.info('Ignore ss://');
-        return;
-    } else if (url.startsWith('ssr://')) {
-        return;
+    for (let i = 0; i < parsers.length; i++) {
+        const { prefix, parser } = parsers[i];
+        if (url.startsWith(prefix)) {
+            const { name, host, ob } = parser(url);
+            cfg.name = name;
+            cfg.host = host;
+            cfg.outbounds.push(ob);
+            return cfg;
+        }
     }
-    if (!cfg.name) {
-        cfg.name = cfg.outbounds[0].settings.vnext[0].address;
-    }
-    return cfg;
 }
 
 export function setInbounds(

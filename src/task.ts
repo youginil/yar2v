@@ -62,8 +62,7 @@ export async function updateSubServers(): Promise<UpdateSubResult[] | false> {
                             subServers.push({
                                 id: generateServerID(),
                                 name: cfg.name,
-                                host: cfg.outbounds[0].settings.vnext[0]
-                                    .address,
+                                host: cfg.host,
                                 url: item,
                                 cfg: JSON.stringify(cfg),
                             });
@@ -94,7 +93,7 @@ export function startSubTimer() {
         } catch (e) {
             logger.error(`Fail to update from  subscriber. ${e.toString()}`);
         }
-    }, 3600 * 1000);
+    }, 2 * 3600 * 1000);
 }
 
 export function stopSubTimer() {
@@ -173,7 +172,7 @@ export function addUserConfig(url: string): string | undefined {
     userServers.push({
         id: generateServerID(),
         name: cfg.name,
-        host: cfg.outbounds[0].settings.vnext[0].address,
+        host: cfg.host,
         url,
         cfg: JSON.stringify(cfg),
     });
