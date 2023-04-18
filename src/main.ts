@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import inquirer from 'inquirer';
 import { DataDir } from './constants';
-import { getAllServers, getConfig, loadConfig } from './config';
+import { getAllServers, getConfig, loadConfig, setConfig } from './config';
 import {
     pingServers,
     selectServer,
@@ -23,15 +23,15 @@ async function selectAction() {
             type: 'rawlist',
             choices: [
                 {
-                    name: 'Choose server',
+                    name: 'Choose Server',
                     value: 'servers',
                 },
                 {
-                    name: 'Running status',
+                    name: 'Running Status',
                     value: 'status',
                 },
                 {
-                    name: 'Update subscribe',
+                    name: 'Update Subscribe',
                     value: 'subscribe',
                 },
                 {
@@ -43,8 +43,8 @@ async function selectAction() {
                     value: 'proxy',
                 },
                 {
-                    name: 'Stop v2ray',
-                    value: 'stop-v2ray',
+                    name: 'Clear Subcribed Servers',
+                    value: 'clear-sub-servers',
                 },
             ],
         },
@@ -91,15 +91,11 @@ async function selectAction() {
             const sockHost = getConfig('local.sock.host');
             const sockPort = getConfig('local.sock.port');
             console.log(
-                `export http_proxy=http://${httpHost}:${httpPort});export https_proxy=http://${httpHost}:${httpPort});export ALL_PROXY=socks5://${sockHost}:${sockPort}`
+                `export http_proxy=http://${httpHost}:${httpPort};export https_proxy=http://${httpHost}:${httpPort};export ALL_PROXY=socks5://${sockHost}:${sockPort}`
             );
             break;
-        case 'stop-v2ray':
-            try {
-                stopV2ray();
-            } catch (e) {
-                console.error(e.message);
-            }
+        case 'clear-sub-servers':
+            await setConfig('servers.sub', []);
             break;
         default:
             console.error(`Invalid Action: ${answers.action}`);
@@ -121,7 +117,7 @@ async function chooseServer() {
         ].join(' '),
         value: server.id,
     }));
-    choices.push({ name: 'Back', value: '' });
+    choices.unshift({ name: 'Back', value: '' });
     const answers = await inquirer.prompt([
         {
             name: 'server',
@@ -159,7 +155,7 @@ async function chooseServer() {
     process.on('SIGINT', () => {
         console.log('Bye Bye');
         try {
-            stopV2ray();
+            stopV2ray(false);
             process.exit();
         } catch (e) {
             console.error(e.toString());

@@ -183,6 +183,7 @@ const v2ray = path.join(DataDir, 'v2ray');
 const v2log = logger.child({ module: 'v2ray' });
 const v2config = path.join(DataDir, 'config.json');
 let v2proc: ChildProcessWithoutNullStreams | undefined;
+let waitingStartup = false;
 
 async function execV2ray(
     ...params: string[]
@@ -209,6 +210,7 @@ export function startV2ray() {
     }
 
     v2proc = spawn(v2ray, ['run', '-c', v2config]);
+    waitingStartup = false;
     v2proc.stdout.on('data', (data) => {
         v2log.info(data.toString());
     });
@@ -222,23 +224,24 @@ export function startV2ray() {
         } else {
             v2log.error(`Exit with code ${code}`);
         }
+        if (waitingStartup) {
+            startV2ray();
+        }
     });
 }
 
-export function stopV2ray() {
+export function stopV2ray(restart: boolean) {
     v2log.info('Stop v2ray');
-    if (v2proc) {
-        if (v2proc.kill()) {
-            v2proc = undefined;
-        } else {
+    if (v2proc && typeof v2proc.pid === 'number') {
+        if (restart) {
+            waitingStartup = true;
+        }
+        if (!process.kill(v2proc.pid)) {
             throw new Error('Cannot stop v2ray');
         }
+    } else if (restart) {
+        startV2ray();
     }
-}
-
-function restartV2ray() {
-    stopV2ray();
-    startV2ray();
 }
 
 export function v2rayIsRunning() {
@@ -262,7 +265,7 @@ export async function selectServer(id: string) {
                     getConfig('local.sock.port')
                 );
                 await fs.writeFile(v2config, JSON.stringify(cfg));
-                restartV2ray();
+                stopV2ray(true);
                 return;
             }
         }
