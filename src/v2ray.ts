@@ -126,7 +126,7 @@ export class V2ray {
         this.logger = logger.child({ module: 'v2ray-' + name });
     }
 
-    async run(onExit: () => void) {
+    async run() {
         this.logger.info('Start v2ray ' + this.name);
         if (this.proc) {
             this.logger.warning('V2ray already started');
@@ -197,7 +197,6 @@ export class V2ray {
             } else {
                 this.logger.error(`Exit with code ${code}`);
             }
-            onExit();
         });
     }
 

@@ -181,15 +181,6 @@ let v2main: V2ray;
 const v2testCfgfile = path.join(DataDir, 'v2ray.test.json');
 let v2test: V2ray;
 
-let waitingExitCounter = 2;
-
-function checkAndExit() {
-    waitingExitCounter--;
-    if (waitingExitCounter === 0) {
-        process.exit();
-    }
-}
-
 export async function startV2ray() {
     v2main = new V2ray(
         'main',
@@ -198,7 +189,7 @@ export async function startV2ray() {
         [getConfig('main.sock.host'), getConfig('main.sock.port')],
         [getConfig('main.api.host'), getConfig('main.api.port')]
     );
-    await v2main.run(checkAndExit);
+    await v2main.run();
 
     v2test = new V2ray(
         'test',
@@ -207,7 +198,7 @@ export async function startV2ray() {
         [getConfig('test.sock.host'), getConfig('test.sock.port')],
         [getConfig('test.api.host'), getConfig('test.api.port')]
     );
-    await v2test.run(checkAndExit);
+    await v2test.run();
 }
 
 export function stopV2ray() {
