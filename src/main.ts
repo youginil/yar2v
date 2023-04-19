@@ -8,11 +8,12 @@ import {
     selectServer,
     startPingTimer,
     startSubTimer,
+    startV2ray,
     stopPingTimer,
     stopSubTimer,
     stopV2ray,
     updateSubServers,
-    v2rayIsRunning,
+    v2rayStats,
 } from './task';
 import { setLoggerLevel } from './logger';
 
@@ -32,7 +33,7 @@ async function selectAction() {
                     value: 'status',
                 },
                 {
-                    name: 'Update Subscribe',
+                    name: 'Subscribe',
                     value: 'subscribe',
                 },
                 {
@@ -52,10 +53,11 @@ async function selectAction() {
     ]);
     switch (answers.action) {
         case 'status':
-            if (v2rayIsRunning()) {
-                console.log('V2ray is running');
-            } else {
-                console.log('V2ray is stopped');
+            try {
+                const stat = await v2rayStats();
+                console.log(stat);
+            } catch (e) {
+                console.error(e);
             }
             break;
         case 'servers':
@@ -87,10 +89,10 @@ async function selectAction() {
             await chooseServer();
             break;
         case 'proxy':
-            const httpHost = getConfig('local.http.host');
-            const httpPort = getConfig('local.http.port');
-            const sockHost = getConfig('local.sock.host');
-            const sockPort = getConfig('local.sock.port');
+            const httpHost = getConfig('main.http.host');
+            const httpPort = getConfig('main.http.port');
+            const sockHost = getConfig('main.sock.host');
+            const sockPort = getConfig('main.sock.port');
             console.log(
                 `export http_proxy=http://${httpHost}:${httpPort};export https_proxy=http://${httpHost}:${httpPort};export ALL_PROXY=socks5://${sockHost}:${sockPort}`
             );
@@ -125,7 +127,7 @@ async function chooseServer() {
             message: 'Choose server',
             type: 'rawlist',
             choices,
-            pageSize: 30,
+            pageSize: 20,
         },
     ]);
     if (answers.server) {
@@ -142,25 +144,26 @@ async function chooseServer() {
         await fs.mkdir(DataDir, { recursive: true });
     }
     await loadConfig();
+    setLoggerLevel(getConfig('log.level'));
+    await startV2ray();
     startSubTimer();
     startPingTimer();
-    setLoggerLevel(getConfig('log.level'));
 
     const sid = getConfig('server');
     if (sid) {
-        try {
-            await selectServer(sid);
-            console.log('V2ray started');
-        } catch (e) {
-            console.error(e);
-        }
+//         setTimeout(async () => {
+//             try {
+//                 await selectServer(sid);
+//             } catch (e) {
+//                 console.error(e);
+//             }
+//         }, 1000);
     }
 
     process.on('SIGINT', () => {
-        console.log('Bye Bye');
         try {
-            stopV2ray(false);
-            process.exit();
+            stopV2ray();
+            console.log('Waiting v2ray exit...');
         } catch (e) {
             console.error(e.toString());
         }

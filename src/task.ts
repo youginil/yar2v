@@ -1,12 +1,9 @@
-import { ChildProcessWithoutNullStreams, exec, spawn } from 'child_process';
-import { existsSync } from 'fs';
-import fs from 'fs/promises';
-import path from 'path';
 import axios from 'axios';
 import ping from 'ping';
 import { getAllServers, getConfig, saveConfig, setConfig } from './config';
-import { parseURL, setInbounds } from './formats';
+import { V2ray, parseURL } from './v2ray';
 import logger from './logger';
+import path from 'path';
 import { DataDir } from './constants';
 
 type UpdateSubResult = {
@@ -18,11 +15,11 @@ type UpdateSubResult = {
 
 let isUpdatingFromSub = false;
 
-export function generateServerID(): string {
+const uplog = logger.child({ module: 'subscribe' });
+
+function generateServerID() {
     return Date.now() + '-' + Math.random();
 }
-
-const uplog = logger.child({ module: 'subscribe' });
 
 export async function updateSubServers(): Promise<UpdateSubResult[] | false> {
     uplog.info('Start updating servers...');
@@ -93,7 +90,7 @@ export function startSubTimer() {
         } catch (e) {
             logger.error(`Fail to update from  subscriber. ${e.toString()}`);
         }
-    }, 2 * 3600 * 1000);
+    }, 6 * 3600 * 1000);
 }
 
 export function stopSubTimer() {
@@ -150,7 +147,7 @@ export function startPingTimer() {
         } catch (e) {
             logger.error(`Fail to ping. ${e.toString()}`);
         }
-    }, 5 * 60 * 1000);
+    }, 2 * 60 * 1000);
 }
 
 export function stopPingTimer() {
@@ -178,73 +175,48 @@ export function addUserConfig(url: string): string | undefined {
     });
 }
 
-const v2ray = path.join(DataDir, 'v2ray');
-const v2log = logger.child({ module: 'v2ray' });
-const v2config = path.join(DataDir, 'config.json');
-let v2proc: ChildProcessWithoutNullStreams | undefined;
-let waitingStartup = false;
+const v2mainCfgfile = path.join(DataDir, 'v2ray.main.json');
+let v2main: V2ray;
 
-async function execV2ray(
-    ...params: string[]
-): Promise<{ stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-        exec(v2ray + ' ' + params.join(' '), (err, stdout, stderr) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve({ stdout, stderr });
-            }
-        });
-    });
-}
+const v2testCfgfile = path.join(DataDir, 'v2ray.test.json');
+let v2test: V2ray;
 
-export function startV2ray() {
-    v2log.info('Start v2ray');
-    if (v2proc) {
-        throw new Error('V2ray is running');
-    }
+let waitingExitCounter = 2;
 
-    if (!existsSync(v2config)) {
-        throw new Error('No config file, select a server first');
-    }
-
-    v2proc = spawn(v2ray, ['run', '-c', v2config]);
-    waitingStartup = false;
-    v2proc.stdout.on('data', (data) => {
-        v2log.info(data.toString());
-    });
-    v2proc.stderr.on('data', (data) => {
-        v2log.error(data.toString());
-    });
-    v2proc.on('exit', (code) => {
-        v2proc = undefined;
-        if (code === 0) {
-            v2log.info('Exit normally');
-        } else {
-            v2log.error(`Exit with code ${code}`);
-        }
-        if (waitingStartup) {
-            startV2ray();
-        }
-    });
-}
-
-export function stopV2ray(restart: boolean) {
-    v2log.info('Stop v2ray');
-    if (v2proc && typeof v2proc.pid === 'number') {
-        if (restart) {
-            waitingStartup = true;
-        }
-        if (!process.kill(v2proc.pid)) {
-            throw new Error('Cannot stop v2ray');
-        }
-    } else if (restart) {
-        startV2ray();
+function checkAndExit() {
+    waitingExitCounter--;
+    if (waitingExitCounter === 0) {
+        process.exit();
     }
 }
 
-export function v2rayIsRunning() {
-    return !!v2proc;
+export async function startV2ray() {
+    v2main = new V2ray(
+        'main',
+        v2mainCfgfile,
+        [getConfig('main.http.host'), getConfig('main.http.port')],
+        [getConfig('main.sock.host'), getConfig('main.sock.port')],
+        [getConfig('main.api.host'), getConfig('main.api.port')]
+    );
+    await v2main.run(checkAndExit);
+
+    v2test = new V2ray(
+        'test',
+        v2testCfgfile,
+        [getConfig('test.http.host'), getConfig('test.http.port')],
+        [getConfig('test.sock.host'), getConfig('test.sock.port')],
+        [getConfig('test.api.host'), getConfig('test.api.port')]
+    );
+    await v2test.run(checkAndExit);
+}
+
+export function stopV2ray() {
+    v2main.stop();
+    v2test.stop();
+}
+
+export async function v2rayStats() {
+    return await v2main.stats();
 }
 
 export async function selectServer(id: string) {
@@ -255,21 +227,15 @@ export async function selectServer(id: string) {
         for (let j = 0; j < servers.length; j++) {
             const server = servers[j];
             if (server.id === id) {
-                const cfg = JSON.parse(server.cfg);
-                setInbounds(
-                    cfg,
-                    getConfig('local.http.host'),
-                    getConfig('local.http.port'),
-                    getConfig('local.sock.host'),
-                    getConfig('local.sock.port')
-                );
-                await fs.writeFile(v2config, JSON.stringify(cfg));
+                const curServer = getConfig('server');
+                if (curServer) {
+                    await v2main.delOutbound(curServer);
+                }
+                await v2main.addOutbound(JSON.parse(server.cfg));
                 await setConfig('server', id);
-                stopV2ray(true);
                 return;
             }
         }
     }
-    throw new Error('Invalid server ID');
 }
 

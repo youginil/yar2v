@@ -76,21 +76,53 @@ const schema: JSONSchemaType<Configuration> = {
             type: 'string',
             default: '',
         },
-        'local.http.host': {
+        'main.http.host': {
             type: 'string',
             default: '127.0.0.1',
         },
-        'local.http.port': {
+        'main.http.port': {
             type: 'number',
             default: 1080,
         },
-        'local.sock.host': {
+        'main.sock.host': {
             type: 'string',
             default: '127.0.0.1',
         },
-        'local.sock.port': {
+        'main.sock.port': {
             type: 'number',
             default: 1090,
+        },
+        'main.api.host': {
+            type: 'string',
+            default: '127.0.0.1',
+        },
+        'main.api.port': {
+            type: 'number',
+            default: 1100,
+        },
+        'test.http.host': {
+            type: 'string',
+            default: '127.0.0.1',
+        },
+        'test.http.port': {
+            type: 'number',
+            default: 2080,
+        },
+        'test.sock.host': {
+            type: 'string',
+            default: '127.0.0.1',
+        },
+        'test.sock.port': {
+            type: 'number',
+            default: 2090,
+        },
+        'test.api.host': {
+            type: 'string',
+            default: '127.0.0.1',
+        },
+        'test.api.port': {
+            type: 'number',
+            default: 2100,
         },
         'log.level': {
             type: 'string',
@@ -102,10 +134,18 @@ const schema: JSONSchemaType<Configuration> = {
         'servers.user',
         'servers.sub',
         'server',
-        'local.http.host',
-        'local.http.port',
-        'local.sock.host',
-        'local.sock.port',
+        'main.http.host',
+        'main.http.port',
+        'main.sock.host',
+        'main.sock.port',
+        'main.api.host',
+        'main.api.port',
+        'test.http.host',
+        'test.http.port',
+        'test.sock.host',
+        'test.sock.port',
+        'test.api.host',
+        'test.api.port',
         'log.level',
     ],
 };

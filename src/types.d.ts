@@ -12,14 +12,22 @@ interface Configuration {
     'servers.user': Server[];
     'servers.sub': Server[];
     server: string;
-    'local.http.host': string;
-    'local.http.port': number;
-    'local.sock.host': string;
-    'local.sock.port': number;
+    'main.http.host': string;
+    'main.http.port': number;
+    'main.sock.host': string;
+    'main.sock.port': number;
+    'main.api.host': string;
+    'main.api.port': number;
+    'test.http.host': string;
+    'test.http.port': number;
+    'test.sock.host': string;
+    'test.sock.port': number;
+    'test.api.host': string;
+    'test.api.port': number;
     'log.level': string;
 }
 
-interface VMessInbound {
+type VMessInbound = Partial<{
     clients: {
         id: string;
         level: number;
@@ -34,13 +42,13 @@ interface VMessInbound {
         to: string;
     };
     disableInsecureEncryption: false;
-}
+}>;
 
-interface VMessOutbound {
-    vnext: {
+type VMessOutbound = {
+    vnext: Partial<{
         address: string;
         port: number;
-        users: {
+        users: Partial<{
             id: string;
             alterId: number;
             security:
@@ -49,12 +57,12 @@ interface VMessOutbound {
                 | 'auto'
                 | 'none'
                 | 'zero';
-            level?: number;
-        }[];
-    }[];
-}
+            level: number;
+        }>[];
+    }>[];
+};
 
-interface TrojanInbound {
+type TrojanInbound = Partial<{
     clients: {
         password: string;
         email: string;
@@ -66,37 +74,46 @@ interface TrojanInbound {
         dest: number;
         xver: number;
     }[];
-}
+}>;
 
-interface TrojaOutbound {
-    servers: {
+type TrojaOutbound = {
+    servers: Partial<{
         address: string;
         port: number;
         password: string;
-        email?: string;
-        level?: number;
-    }[];
-}
+        email: string;
+        level: number;
+    }>[];
+};
 
-interface StreamSettings {
+type DokodemoDoorInbound = Partial<{
+    address: string;
+    port: number;
+    network: 'tcp' | 'udp' | 'tcp,udp';
+    timeout: number;
+    followRedirect: boolean;
+    userLevel: number;
+}>;
+
+type StreamSettings = Partial<{
     network: 'tcp' | 'kcp' | 'ws' | 'http' | 'domainsocket' | 'quic' | 'grpc';
     security: 'none' | 'tls';
-    tlsSettings?: {
+    tlsSettings: Partial<{
         serverName: string;
         alpn: string[];
         allowInsecure: boolean;
-        disableSystemRoot?: boolean;
-        certificates?: {
+        disableSystemRoot: boolean;
+        certificates: {
             usage: 'encipherment' | 'verify' | 'issue' | 'verifyclient';
             certificateFile: string;
             keyFile: string;
             certificate: string[];
             key: string[];
         }[];
-        verifyClientCertificate?: boolean;
-        pinnedPeerCertificateChainSha256?: string;
-    };
-    tcpSettings?: {
+        verifyClientCertificate: boolean;
+        pinnedPeerCertificateChainSha256: string;
+    }>;
+    tcpSettings: {
         acceptProxyProtocol: boolean;
         header:
             | { type: 'none' }
@@ -116,7 +133,7 @@ interface StreamSettings {
                   };
               };
     };
-    kcpSettings?: {
+    kcpSettings: {
         mtu: number;
         tti: number;
         uplinkCapacity: number;
@@ -135,7 +152,7 @@ interface StreamSettings {
         };
         seed: string;
     };
-    wsSettings?: {
+    wsSettings: {
         acceptProxyProtocol: boolean;
         path: string;
         headers: Record<string, string>;
@@ -143,13 +160,13 @@ interface StreamSettings {
         useBrowserForwarding: boolean;
         earlyDataHeaderName: string;
     };
-    httpSettings?: {
+    httpSettings: {
         host: string[];
         path: string;
         method: string;
         headers: Record<string, string[]>;
     };
-    quicSettings?: {
+    quicSettings: {
         security: 'none' | 'aes-128-gcm' | 'chacha20-poly1305';
         key: string;
         header: {
@@ -162,24 +179,24 @@ interface StreamSettings {
                 | 'wireguard';
         };
     };
-    dsSettings?: {
+    dsSettings: {
         path: string;
         abstract: boolean;
         padding: boolean;
     };
-    grpcSettings?: {
+    grpcSettings: {
         serviceName: string;
     };
-    sockopt?: {
+    sockopt: {
         mark: number;
         tcpFastOpen: boolean;
         tcpFastOpenQueueLength: number;
         tproxy: 'redirect' | 'tproxy' | 'off';
         tcpKeepAliveInterval: number;
     };
-}
+}>;
 
-interface Inbound {
+type Inbound = Partial<{
     listen: string;
     port: number | string;
     protocol:
@@ -190,10 +207,10 @@ interface Inbound {
         | 'shadowsocks'
         | 'trojan'
         | 'vless';
-    settings?: VMessInbound | TrojanInbound;
-    streamSettings?: StreamSettings;
-    tag?: string;
-    sniffing?: {
+    settings: VMessInbound | TrojanInbound | DokodemoDoorInbound;
+    streamSettings: StreamSettings;
+    tag: string;
+    sniffing: {
         enabled: boolean;
         destOverride: (
             | 'http'
@@ -204,14 +221,14 @@ interface Inbound {
         )[];
         metadataOnly: boolean;
     };
-    allocate?: {
+    allocate: {
         strategy: 'always' | 'random';
         refresh: number;
         concurrency: number;
     };
-}
+}>;
 
-interface Outbound {
+type Outbound = Partial<{
     protocol:
         | 'blackhole'
         | 'dns'
@@ -224,23 +241,23 @@ interface Outbound {
         | 'vless'
         | 'loopback';
     settings: VMessOutbound | TrojaOutbound;
-    sendThrough?: string;
-    tag?: string;
-    streamSettings?: StreamSettings;
-    proxySettings?: {
+    sendThrough: string;
+    tag: string;
+    streamSettings: StreamSettings;
+    proxySettings: {
         tag: string;
         transportLayer: boolean;
     };
-    mux?: {
+    mux: {
         enabled: boolean;
         concurrency: number;
     };
-}
+}>;
 
 interface V2rayConfig {
     name: string;
     host: string;
-    log: {
+    log?: {
         access: string;
         error: string;
         loglevel: 'debug' | 'info' | 'warning' | 'error' | 'none';
@@ -250,10 +267,10 @@ interface V2rayConfig {
         services: string[];
     };
     dns?: {};
-    routing?: {
+    routing?: Partial<{
         domainStrategy: 'AsIs';
         domainMatcher: 'mph';
-        rules: {
+        rules: Partial<{
             domainMatcher: 'linear' | 'mph';
             type: 'field';
             domains: string[];
@@ -268,7 +285,7 @@ interface V2rayConfig {
             attrs: string;
             outboundTag: string;
             balancerTag: string;
-        }[];
+        }>[];
         balancers: {
             tag: string;
             selector: string[];
@@ -276,7 +293,7 @@ interface V2rayConfig {
                 type: 'random' | 'leastPing';
             };
         }[];
-    };
+    }>;
     policy?: {
         levels: Record<
             string,

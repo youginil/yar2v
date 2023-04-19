@@ -4,9 +4,14 @@ import { DataDir } from './constants';
 const logger = createLogger({
     level: 'debug',
     format: format.combine(
-        format.timestamp(),
-        format.json(),
-        format.prettyPrint()
+        format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        format.align(),
+        format.printf(
+            (info) =>
+                `${info.level} ${[info.timestamp]} ${[
+                    info.meta?.module ?? 'Default',
+                ]} ${info.message}`
+        )
     ),
     transports: [
         new transports.File({
