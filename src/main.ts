@@ -151,19 +151,19 @@ async function chooseServer() {
 
     const sid = getConfig('server');
     if (sid) {
-//         setTimeout(async () => {
-//             try {
-//                 await selectServer(sid);
-//             } catch (e) {
-//                 console.error(e);
-//             }
-//         }, 1000);
+        setTimeout(async () => {
+            try {
+                await selectServer(sid);
+            } catch (e) {
+                console.error(e);
+            }
+        }, 1000);
     }
 
     process.on('SIGINT', () => {
         try {
             stopV2ray();
-            console.log('Waiting v2ray exit...');
+            process.exit();
         } catch (e) {
             console.error(e.toString());
         }

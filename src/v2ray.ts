@@ -204,7 +204,7 @@ export class V2ray {
     stop() {
         this.logger.info('Stop v2ray ' + this.name + typeof this.proc);
         if (this.proc) {
-            if (!this.proc.kill('SIGTERM')) {
+            if (!this.proc.kill('SIGKILL')) {
                 throw new Error('Cannot stop v2ray');
             }
             this.proc = null;
