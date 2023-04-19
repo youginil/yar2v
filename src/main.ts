@@ -125,6 +125,7 @@ async function chooseServer() {
             message: 'Choose server',
             type: 'rawlist',
             choices,
+            pageSize: 30,
         },
     ]);
     if (answers.server) {
@@ -167,7 +168,6 @@ async function chooseServer() {
 
     while (true) {
         await selectAction();
-        console.log('\n');
     }
 })();
 

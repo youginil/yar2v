@@ -1,3 +1,5 @@
+import logger from './logger';
+
 type Parser = (url: string) => { name: string; host: string; ob: Outbound };
 
 const parseVmess: Parser = (url: string) => {
@@ -86,6 +88,7 @@ export function parseURL(url: string): V2rayConfig | undefined {
             return cfg;
         }
     }
+    logger.error(`Invalid url: ${url}`);
 }
 
 export function setInbounds(
