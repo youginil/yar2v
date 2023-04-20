@@ -117,7 +117,6 @@ export async function pingServers(print2console = false) {
                 .probe(s.host, { timeout: 10 })
                 .then((result) => {
                     if (result.alive) {
-                        logger.debug(result);
                         s.delay = Math.ceil(+result.avg);
                     } else {
                         s.delay = -1;

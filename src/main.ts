@@ -184,6 +184,7 @@ async function chooseServer() {
     await startV2ray();
     startSubTimer();
     startPingTimer();
+    startAbilityTimer();
 
     const sid = getConfig('server');
     if (sid) {
