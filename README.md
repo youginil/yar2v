@@ -44,6 +44,5 @@ npm i -g yar2v
 
 -   More config items
 -   More doc
--   Auto remove invalid server
 -   Save hot servers
 

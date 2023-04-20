@@ -4,7 +4,7 @@ import inquirer from 'inquirer';
 import { DataDir } from './constants';
 import { getAllServers, getConfig, loadConfig, setConfig } from './config';
 import {
-    checkAbility,
+    checkConnection,
     pingServers,
     runningStatus,
     selectServer,
@@ -91,7 +91,7 @@ async function selectAction() {
         case 'ability':
             stopAbilityTimer();
             try {
-                await checkAbility(true);
+                await checkConnection(true);
             } catch (e) {
                 //
             }
@@ -116,22 +116,22 @@ async function selectAction() {
 }
 
 function compareServer(a: Server, b: Server) {
-    if (a.ability === b.ability) {
-        if (a.delay < 0) {
+    if (a.conn === b.conn) {
+        if (a.ping < 0) {
             return 1;
         }
-        if (b.delay < 0) {
+        if (b.ping < 0) {
             return -1;
         }
-        return a.delay - b.delay;
+        return a.ping - b.ping;
     }
-    if (a.ability < 0) {
+    if (a.conn < 0) {
         return 1;
     }
-    if (b.ability < 0) {
+    if (b.conn < 0) {
         return -1;
     }
-    return a.ability - b.ability;
+    return a.conn - b.conn;
 }
 
 async function chooseServer() {
@@ -140,8 +140,8 @@ async function chooseServer() {
     const len1 = servers.length.toString().length;
     const [len2, len3] = servers.reduce(
         (r, item) => [
-            Math.max(r[0], item.ability.toString().length),
-            Math.max(r[1], item.delay.toString().length),
+            Math.max(r[0], item.conn.toString().length),
+            Math.max(r[1], item.ping.toString().length),
         ],
         [0, 0]
     );
@@ -150,8 +150,8 @@ async function chooseServer() {
         .map((server, idx) => ({
             name: [
                 ' '.repeat(len1 - (idx + 1).toString().length),
-                server.ability.toString().padStart(len2 + 1, ' ') + 'ms',
-                server.delay.toString().padStart(len3 + 1, ' ') + 'ms  ',
+                server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
+                server.ping.toString().padStart(len3 + 1, ' ') + 'ms  ',
                 server.name,
             ].join(' '),
             value: server.id,

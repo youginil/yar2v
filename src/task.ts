@@ -2,6 +2,7 @@ import axios from 'axios';
 import ping from 'ping';
 import createHttpsAgent from 'https-proxy-agent';
 import {
+    delSubServers,
     getAllServers,
     getConfig,
     getCurrentServer,
@@ -60,8 +61,10 @@ export async function updateSubServers(print2console = false) {
                                 host: cfg.host,
                                 url: item,
                                 cfg: JSON.stringify(cfg),
-                                delay: -1,
-                                ability: -1,
+                                ping: -1,
+                                pingFailedTimes: 0,
+                                conn: -1,
+                                connFailedTimes: 0,
                             });
                             uplog.info(`${item}`);
                         }
@@ -87,7 +90,7 @@ export function startSubTimer() {
         } catch (e) {
             logger.error(`Fail to update from  subscriber. ${e.toString()}`);
         }
-    }, 6 * 3600 * 1000);
+    }, 1 * 3600 * 1000);
 }
 
 export function stopSubTimer() {
@@ -111,25 +114,34 @@ export async function pingServers(print2console = false) {
     if (servers.length === 0) {
         return;
     }
+    const serversWillRemoved: string[] = [];
     await Promise.allSettled(
         servers.map(async (s) => {
             return ping.promise
                 .probe(s.host, { timeout: 10 })
                 .then((result) => {
                     if (result.alive) {
-                        s.delay = Math.ceil(+result.avg);
+                        s.ping = Math.ceil(+result.avg);
+                        s.pingFailedTimes = 0;
                     } else {
-                        s.delay = -1;
+                        s.ping = -1;
+                        s.pingFailedTimes++;
+                        if (s.pingFailedTimes >= 10) {
+                            serversWillRemoved.push(s.id);
+                        }
                     }
-                    pinglog.info(`${s.delay}ms ${s.host}`);
+                    pinglog.info(`${s.ping}ms ${s.host}`);
                 })
                 .catch((e) => {
-                    pinglog.error(
+                    pinglog.info(
                         `Fail to ping. server: ${s.id}. ${e.toString()}`
                     );
                 });
         })
     );
+    if (serversWillRemoved.length > 0) {
+        delSubServers(...serversWillRemoved);
+    }
     await saveConfig();
 }
 
@@ -170,8 +182,10 @@ export function addUserConfig(url: string): string | undefined {
         host: cfg.host,
         url,
         cfg: JSON.stringify(cfg),
-        delay: -1,
-        ability: -1,
+        ping: -1,
+        pingFailedTimes: 0,
+        conn: -1,
+        connFailedTimes: 0,
     });
 }
 
@@ -227,13 +241,13 @@ export async function selectServer(id: string) {
     }
 }
 
-let isCheckingAbility = false;
-export async function checkAbility(print2console = false) {
+let isCheckingConnection = false;
+export async function checkConnection(print2console = false) {
     const ablog = (print2console ? cslogger : logger).child({
         module: 'Ability',
     });
     ablog.info(`Check ability`);
-    if (isCheckingAbility) {
+    if (isCheckingConnection) {
         ablog.warn('The ability checking is in progress');
         return;
     }
@@ -251,14 +265,16 @@ export async function checkAbility(print2console = false) {
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
         },
     });
+    const serversWillRemoved: string[] = [];
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
-        if (server.delay < 0) {
+        if (server.ping < 0) {
             continue;
         }
         ablog.info(`Checking [${server.name}] ${server.host}`);
         const totalTimes = 3;
         let tryTimes = 0;
+        let connected = false;
         while (tryTimes < totalTimes) {
             tryTimes++;
             ablog.info(`Trying (${tryTimes}/${totalTimes})...`);
@@ -267,26 +283,38 @@ export async function checkAbility(print2console = false) {
                 const st = Date.now();
                 const res = await request.get(testUrl);
                 const dt = Date.now() - st;
-                server.ability = dt;
-                ablog.info(`Response: ${res.status}. Duration: ${dt}ms`);
+                server.conn = dt;
+                connected = true;
+                ablog.info(`${res.status} ${res.statusText} ${dt}ms`);
                 break;
             } catch (e) {
-                server.ability = -1;
-                ablog.error(e.toString());
+                server.conn = -1;
+                ablog.info(e.toString());
             }
         }
+        if (connected) {
+            server.connFailedTimes = 0;
+        } else {
+            server.connFailedTimes++;
+            if (server.connFailedTimes >= 10) {
+                serversWillRemoved.push(server.id);
+            }
+        }
+    }
+    if (serversWillRemoved.length > 0) {
+        delSubServers(...serversWillRemoved);
     }
     await saveConfig();
 }
 
-let abTimer: NodeJS.Timer | null = null;
+let checkTimer: NodeJS.Timer | null = null;
 export function startAbilityTimer() {
-    if (abTimer !== null) {
+    if (checkTimer !== null) {
         throw new Error('Ability timer is already started');
     }
-    abTimer = setInterval(() => {
+    checkTimer = setInterval(() => {
         try {
-            checkAbility();
+            checkConnection();
         } catch (_) {
             //
         }
@@ -294,9 +322,9 @@ export function startAbilityTimer() {
 }
 
 export function stopAbilityTimer() {
-    if (abTimer !== null) {
-        clearInterval(abTimer);
-        abTimer = null;
+    if (checkTimer !== null) {
+        clearInterval(checkTimer);
+        checkTimer = null;
     }
 }
 

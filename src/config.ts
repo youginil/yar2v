@@ -22,14 +22,30 @@ const Server: JSONSchemaType<Server> = {
         cfg: {
             type: 'string',
         },
-        delay: {
+        ping: {
             type: 'number',
         },
-        ability: {
+        pingFailedTimes: {
+            type: 'number',
+        },
+        conn: {
+            type: 'number',
+        },
+        connFailedTimes: {
             type: 'number',
         },
     },
-    required: ['id', 'name', 'host', 'url', 'cfg', 'delay', 'ability'],
+    required: [
+        'id',
+        'name',
+        'host',
+        'url',
+        'cfg',
+        'ping',
+        'pingFailedTimes',
+        'conn',
+        'connFailedTimes',
+    ],
 };
 
 const schema: JSONSchemaType<Configuration> = {
@@ -198,5 +214,17 @@ export function getCurrentServer(): Server | undefined {
             }
         }
     }
+}
+
+export function delSubServers(...ids: string[]) {
+    const servers = config['servers.sub'];
+    ids.forEach((id) => {
+        for (let i = 0; i < servers.length; i++) {
+            if (servers[i].id === id) {
+                servers.splice(i, 1);
+                break;
+            }
+        }
+    });
 }
 

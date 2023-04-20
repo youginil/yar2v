@@ -4,8 +4,10 @@ interface Server {
     host: string;
     url: string;
     cfg: string;
-    delay: number;
-    ability: number;
+    ping: number;
+    pingFailedTimes: number;
+    conn: number;
+    connFailedTimes: number;
 }
 
 interface Configuration {
