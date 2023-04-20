@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
 import { DataDir } from './constants';
 
 const logger = createLogger({
@@ -18,14 +19,9 @@ const logger = createLogger({
         )
     ),
     transports: [
-        new transports.File({
+        new DailyRotateFile({
             dirname: DataDir,
             filename: 'yar2v.log',
-        }),
-        new transports.File({
-            dirname: DataDir,
-            filename: 'yar2v.error.log',
-            level: 'error',
         }),
     ],
 });
