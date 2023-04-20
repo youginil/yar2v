@@ -78,8 +78,6 @@ async function selectAction() {
                 console.error(e.message);
             }
             startSubTimer();
-            await chooseServer();
-            break;
         case 'ping':
             stopPingTimer();
             try {

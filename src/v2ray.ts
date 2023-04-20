@@ -21,6 +21,9 @@ const parseVmess: Parser = (url: string) => {
     } else {
         name = data.add;
     }
+    if (data.tls === 'xtls') {
+        logger.error(`TODO xtls: ${url}`);
+    }
     const ob: Outbound = {
         protocol: 'vmess',
         settings: {
@@ -68,12 +71,35 @@ const parseTrojan: Parser = (url: string) => {
     return { name, host: uo.hostname, ob };
 };
 
+const parseSS: Parser = (url: string) => {
+    const uo = new URL(url);
+    const name = uo.hash ? decodeURIComponent(uo.hash.slice(1)) : uo.hostname;
+    const [method, password] = Buffer.from(uo.username, 'base64')
+        .toString()
+        .split(':');
+    const ob: Outbound = {
+        protocol: 'shadowsocks',
+        settings: {
+            servers: [
+                {
+                    address: uo.hostname,
+                    port: +uo.port,
+                    method,
+                    password,
+                },
+            ],
+        },
+    };
+    return { name, host: uo.hostname, ob };
+};
+
 const parsers: {
     prefix: string;
     parser: (url: string) => { name: string; host: string; ob: Outbound };
 }[] = [
     { prefix: 'vmess://', parser: parseVmess },
     { prefix: 'trojan://', parser: parseTrojan },
+    { prefix: 'ss://', parser: parseSS },
 ];
 
 export function parseURL(url: string): V2rayConfig | undefined {

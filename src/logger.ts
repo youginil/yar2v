@@ -37,7 +37,7 @@ export const cslogger = createLogger({
         format.colorize(),
         format.printf(
             (info) =>
-                `${info.level} [${info.meta?.module ?? 'Global'}] ${
+                `${info.level} ${info.meta?.module ?? 'Global'} ${
                     typeof info.message === 'object'
                         ? JSON.stringify(info.message)
                         : info.message

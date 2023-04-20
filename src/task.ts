@@ -1,5 +1,6 @@
 import axios from 'axios';
 import ping from 'ping';
+import createHttpsAgent from 'https-proxy-agent';
 import {
     getAllServers,
     getConfig,
@@ -242,8 +243,20 @@ export async function checkAbility(print2console = false) {
     const proxyPort = getConfig('test.http.port');
     const servers = [...userServers, ...subServers];
     const testUrl = 'https://google.com/';
+    const request = axios.create({
+        httpsAgent: createHttpsAgent(`http://${proxyHost}:${proxyPort}`),
+        proxy: false,
+        timeout: 10 * 1000,
+        headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+        },
+    });
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
+        if (server.delay < 0) {
+            continue;
+        }
         ablog.info(`Checking [${server.name}] ${server.host}`);
         const totalTimes = 3;
         let tryTimes = 0;
@@ -253,18 +266,7 @@ export async function checkAbility(print2console = false) {
             try {
                 await v2test.changeOutbound(JSON.parse(server.cfg));
                 const st = Date.now();
-                const res = await axios.get(testUrl, {
-                    headers: {
-                        'User-Agent':
-                            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
-                    },
-                    timeout: 10000,
-                    proxy: {
-                        protocol: 'http',
-                        host: proxyHost,
-                        port: proxyPort,
-                    },
-                });
+                const res = await request.get(testUrl);
                 const dt = Date.now() - st;
                 server.ability = dt;
                 ablog.info(`Response: ${res.status}. Duration: ${dt}ms`);

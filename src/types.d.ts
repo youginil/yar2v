@@ -96,6 +96,27 @@ type DokodemoDoorInbound = Partial<{
     userLevel: number;
 }>;
 
+type ShadowsocksInbound = Partial<{
+    email: string;
+    method: string;
+    password: string;
+    level: number;
+    network: 'tcp' | 'udp' | 'tcp,udp';
+    ivCheck: boolean;
+}>;
+
+type ShadowsocksOutbound = {
+    servers: Partial<{
+        email: string;
+        address: string;
+        port: number;
+        method: string;
+        password: string;
+        level: number;
+        ivCheck: boolean;
+    }>[];
+};
+
 type StreamSettings = Partial<{
     network: 'tcp' | 'kcp' | 'ws' | 'http' | 'domainsocket' | 'quic' | 'grpc';
     security: 'none' | 'tls';
@@ -208,7 +229,11 @@ type Inbound = Partial<{
         | 'shadowsocks'
         | 'trojan'
         | 'vless';
-    settings: VMessInbound | TrojanInbound | DokodemoDoorInbound;
+    settings:
+        | VMessInbound
+        | TrojanInbound
+        | DokodemoDoorInbound
+        | ShadowsocksInbound;
     streamSettings: StreamSettings;
     tag: string;
     sniffing: {
@@ -241,7 +266,7 @@ type Outbound = Partial<{
         | 'trojan'
         | 'vless'
         | 'loopback';
-    settings: VMessOutbound | TrojaOutbound;
+    settings: VMessOutbound | TrojaOutbound | ShadowsocksOutbound;
     sendThrough: string;
     tag: string;
     streamSettings: StreamSettings;
