@@ -4,16 +4,19 @@ import inquirer from 'inquirer';
 import { DataDir } from './constants';
 import { getAllServers, getConfig, loadConfig, setConfig } from './config';
 import {
+    checkAbility,
     pingServers,
+    runningStatus,
     selectServer,
+    startAbilityTimer,
     startPingTimer,
     startSubTimer,
     startV2ray,
+    stopAbilityTimer,
     stopPingTimer,
     stopSubTimer,
     stopV2ray,
     updateSubServers,
-    v2rayStats,
 } from './task';
 import { setLoggerLevel } from './logger';
 
@@ -41,6 +44,10 @@ async function selectAction() {
                     value: 'ping',
                 },
                 {
+                    name: 'Check Ability',
+                    value: 'ability',
+                },
+                {
                     name: 'Proxy Address',
                     value: 'proxy',
                 },
@@ -54,7 +61,7 @@ async function selectAction() {
     switch (answers.action) {
         case 'status':
             try {
-                const stat = await v2rayStats();
+                const stat = await runningStatus();
                 console.log(stat);
             } catch (e) {
                 console.error(e);
@@ -66,12 +73,7 @@ async function selectAction() {
         case 'subscribe':
             stopSubTimer();
             try {
-                const list = await updateSubServers();
-                if (list) {
-                    list.forEach((item) => {
-                        console.log(item);
-                    });
-                }
+                await updateSubServers(true);
             } catch (e) {
                 console.error(e.message);
             }
@@ -81,11 +83,21 @@ async function selectAction() {
         case 'ping':
             stopPingTimer();
             try {
-                await pingServers();
+                await pingServers(true);
             } catch (e) {
                 console.error(e);
             }
             startPingTimer();
+            await chooseServer();
+            break;
+        case 'ability':
+            stopAbilityTimer();
+            try {
+                await checkAbility(true);
+            } catch (e) {
+                //
+            }
+            startAbilityTimer();
             await chooseServer();
             break;
         case 'proxy':
@@ -105,22 +117,48 @@ async function selectAction() {
     }
 }
 
+function compareServer(a: Server, b: Server) {
+    if (a.ability === b.ability) {
+        if (a.delay < 0) {
+            return 1;
+        }
+        if (b.delay < 0) {
+            return -1;
+        }
+        return a.delay - b.delay;
+    }
+    if (a.ability < 0) {
+        return 1;
+    }
+    if (b.ability < 0) {
+        return -1;
+    }
+    return a.ability - b.ability;
+}
+
 async function chooseServer() {
     const { userServers, subServers } = getAllServers();
-    const userServerLen = userServers.length;
-    const choices: { name: string; value: string }[] = [
-        ...userServers,
-        ...subServers,
-    ].map((server, idx) => ({
-        name: [
-            idx < userServerLen ? 'U' : 'S',
-            (server.delay ? server.delay : -1).toString().padStart(5, ' ') +
-                'ms',
-            server.name,
-        ].join(' '),
-        value: server.id,
-    }));
-    choices.unshift({ name: 'Back', value: '' });
+    const servers = [...userServers, ...subServers];
+    const len1 = servers.length.toString().length;
+    const [len2, len3] = servers.reduce(
+        (r, item) => [
+            Math.max(r[0], item.ability.toString().length),
+            Math.max(r[1], item.delay.toString().length),
+        ],
+        [0, 0]
+    );
+    const choices: { name: string; value: string }[] = servers
+        .sort(compareServer)
+        .map((server, idx) => ({
+            name: [
+                ' '.repeat(len1 - (idx + 1).toString().length),
+                server.ability.toString().padStart(len2 + 1, ' ') + 'ms',
+                server.delay.toString().padStart(len3 + 1, ' ') + 'ms  ',
+                server.name,
+            ].join(' '),
+            value: server.id,
+        }));
+    choices.push({ name: 'Back', value: '' });
     const answers = await inquirer.prompt([
         {
             name: 'server',

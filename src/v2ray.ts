@@ -8,6 +8,10 @@ import path from 'path';
 
 type Parser = (url: string) => { name: string; host: string; ob: Outbound };
 
+const HttpInboundTag = 'user-http';
+const SockInboundTag = 'user-socks';
+const OutboundTag = 'remote';
+
 const parseVmess: Parser = (url: string) => {
     const json = Buffer.from(url.slice(8), 'base64').toString();
     const data = JSON.parse(json);
@@ -90,7 +94,7 @@ export function parseURL(url: string): V2rayConfig | undefined {
             const { name, host, ob } = parser(url);
             cfg.name = name;
             cfg.host = host;
-            ob.tag = 'remote';
+            ob.tag = OutboundTag;
             cfg.outbounds.push(ob);
             return cfg;
         }
@@ -151,13 +155,13 @@ export class V2ray {
                     protocol: 'http',
                     listen: this.httpProxy[0],
                     port: this.httpProxy[1],
-                    tag: 'user-http',
+                    tag: HttpInboundTag,
                 },
                 {
                     protocol: 'socks',
                     listen: this.sockProxy[0],
                     port: this.sockProxy[1],
-                    tag: 'user-socks',
+                    tag: SockInboundTag,
                 },
             ],
             outbounds: [],
@@ -169,8 +173,8 @@ export class V2ray {
                 rules: [
                     { inboundTag: ['api'], outboundTag: 'api', type: 'field' },
                     {
-                        inboundTag: ['user-http', 'user-socks'],
-                        outboundTag: 'remote',
+                        inboundTag: [HttpInboundTag, SockInboundTag],
+                        outboundTag: OutboundTag,
                         type: 'field',
                     },
                 ],
@@ -203,6 +207,7 @@ export class V2ray {
     stop() {
         this.logger.info('Stop v2ray ' + this.name + typeof this.proc);
         if (this.proc) {
+            // sometimes SIGTERM not working
             if (!this.proc.kill('SIGKILL')) {
                 throw new Error('Cannot stop v2ray');
             }
@@ -229,7 +234,7 @@ export class V2ray {
             .stdout;
     }
 
-    async addOutbound(cfg: V2rayConfig) {
+    private async addOutbound(cfg: V2rayConfig) {
         await fs.writeFile(this.cfgfile, JSON.stringify(cfg));
         const { stdout } = await this.exec(
             'api',
@@ -240,7 +245,7 @@ export class V2ray {
         this.logger.info(stdout);
     }
 
-    async delOutbound(...tags: string[]) {
+    private async delOutbound(...tags: string[]) {
         if (tags.length > 0) {
             const { stdout } = await this.exec(
                 'api',
@@ -251,6 +256,11 @@ export class V2ray {
             );
             this.logger.info(stdout);
         }
+    }
+
+    async changeOutbound(cfg: V2rayConfig) {
+        await this.delOutbound(OutboundTag);
+        await this.addOutbound(cfg);
     }
 }
 

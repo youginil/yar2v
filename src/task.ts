@@ -1,49 +1,46 @@
 import axios from 'axios';
 import ping from 'ping';
-import { getAllServers, getConfig, saveConfig, setConfig } from './config';
+import {
+    getAllServers,
+    getConfig,
+    getCurrentServer,
+    saveConfig,
+    setConfig,
+} from './config';
 import { V2ray, parseURL } from './v2ray';
-import logger from './logger';
+import logger, { cslogger } from './logger';
 import path from 'path';
 import { DataDir } from './constants';
 
-type UpdateSubResult = {
-    url: string;
-    total: number;
-    add: number;
-    error: string;
-};
-
 let isUpdatingFromSub = false;
-
-const uplog = logger.child({ module: 'subscribe' });
 
 function generateServerID() {
     return Date.now() + '-' + Math.random();
 }
 
-export async function updateSubServers(): Promise<UpdateSubResult[] | false> {
+export async function updateSubServers(print2console = false) {
+    const uplog = (print2console ? cslogger : logger).child({
+        module: 'subscribe',
+    });
     uplog.info('Start updating servers...');
+
     if (isUpdatingFromSub) {
         uplog.warn(
             'Updating servers from subscribe srouce is in progress, please wait...'
         );
         return false;
     }
-    const rs: UpdateSubResult[] = [];
     const urls = getConfig('subscribe');
     await Promise.allSettled(
         urls.map(async (url) => {
-            const s: UpdateSubResult = { url, total: 0, add: 0, error: '' };
-            rs.push(s);
             return axios
                 .get(url)
                 .then(async (r) => {
+                    uplog.info(`Subscribe from ${url}`);
                     const { userServers, subServers } = getAllServers();
-                    uplog.debug({ url, response: r.data });
                     const items = Buffer.from(r.data as string, 'base64')
                         .toString()
                         .split('\n');
-                    s.total = items.length;
                     items.forEach((item) => {
                         item = item.trim();
                         if (
@@ -53,7 +50,7 @@ export async function updateSubServers(): Promise<UpdateSubResult[] | false> {
                         ) {
                             const cfg = parseURL(item);
                             if (!cfg) {
-                                uplog.error(`Fail to parse url: ${url}`);
+                                uplog.error(`Fail to parse url: ${item}`);
                                 return;
                             }
                             subServers.push({
@@ -62,20 +59,19 @@ export async function updateSubServers(): Promise<UpdateSubResult[] | false> {
                                 host: cfg.host,
                                 url: item,
                                 cfg: JSON.stringify(cfg),
+                                delay: -1,
+                                ability: -1,
                             });
-                            s.add++;
-                            uplog.info({ sub: url, config: item });
+                            uplog.info(`${item}`);
                         }
                     });
                 })
                 .catch((e) => {
-                    uplog.error({ url, err: e });
+                    uplog.error(e.toString());
                 });
         })
     );
     await saveConfig();
-    uplog.info('Updating end');
-    return rs;
 }
 
 let subTimer: NodeJS.Timer | null = null;
@@ -101,9 +97,11 @@ export function stopSubTimer() {
 }
 
 let pinging = false;
-const pinglog = logger.child({ module: 'ping' });
-export async function pingServers() {
-    pinglog.info('Start ping...');
+export async function pingServers(print2console = false) {
+    const pinglog = (print2console ? cslogger : logger).child({
+        module: 'ping',
+    });
+    pinglog.info('Ping...');
     if (pinging) {
         throw new Error('Pinging');
     }
@@ -123,16 +121,16 @@ export async function pingServers() {
                     } else {
                         s.delay = -1;
                     }
+                    pinglog.info(`${s.delay}ms ${s.host}`);
                 })
                 .catch((e) => {
                     pinglog.error(
-                        `Fail to ping. server: ${s.id}. err: ${e.toString()}`
+                        `Fail to ping. server: ${s.id}. ${e.toString()}`
                     );
                 });
         })
     );
     await saveConfig();
-    pinglog.info('Ping end');
 }
 
 let pingTimer: NodeJS.Timer | null = null;
@@ -172,6 +170,8 @@ export function addUserConfig(url: string): string | undefined {
         host: cfg.host,
         url,
         cfg: JSON.stringify(cfg),
+        delay: -1,
+        ability: -1,
     });
 }
 
@@ -206,8 +206,9 @@ export function stopV2ray() {
     v2test.stop();
 }
 
-export async function v2rayStats() {
-    return await v2main.stats();
+export async function runningStatus() {
+    const curServer = getCurrentServer();
+    return curServer ? curServer.name + ' ' + curServer.host : 'Not running';
 }
 
 export async function selectServer(id: string) {
@@ -218,15 +219,83 @@ export async function selectServer(id: string) {
         for (let j = 0; j < servers.length; j++) {
             const server = servers[j];
             if (server.id === id) {
-                const curServer = getConfig('server');
-                if (curServer) {
-                    await v2main.delOutbound(curServer);
-                }
-                await v2main.addOutbound(JSON.parse(server.cfg));
+                await v2main.changeOutbound(JSON.parse(server.cfg));
                 await setConfig('server', id);
                 return;
             }
         }
+    }
+}
+
+let isCheckingAbility = false;
+export async function checkAbility(print2console = false) {
+    const ablog = (print2console ? cslogger : logger).child({
+        module: 'Ability',
+    });
+    ablog.info(`Check ability`);
+    if (isCheckingAbility) {
+        ablog.warn('The ability checking is in progress');
+        return;
+    }
+    const { userServers, subServers } = getAllServers();
+    const proxyHost = getConfig('test.http.host');
+    const proxyPort = getConfig('test.http.port');
+    const servers = [...userServers, ...subServers];
+    const testUrl = 'https://google.com/';
+    for (let i = 0; i < servers.length; i++) {
+        const server = servers[i];
+        ablog.info(`Checking [${server.name}] ${server.host}`);
+        const totalTimes = 3;
+        let tryTimes = 0;
+        while (tryTimes < totalTimes) {
+            tryTimes++;
+            ablog.info(`Trying (${tryTimes}/${totalTimes})...`);
+            try {
+                await v2test.changeOutbound(JSON.parse(server.cfg));
+                const st = Date.now();
+                const res = await axios.get(testUrl, {
+                    headers: {
+                        'User-Agent':
+                            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+                    },
+                    timeout: 10000,
+                    proxy: {
+                        protocol: 'http',
+                        host: proxyHost,
+                        port: proxyPort,
+                    },
+                });
+                const dt = Date.now() - st;
+                server.ability = dt;
+                ablog.info(`Response: ${res.status}. Duration: ${dt}ms`);
+                break;
+            } catch (e) {
+                server.ability = -1;
+                ablog.error(e.toString());
+            }
+        }
+    }
+    await saveConfig();
+}
+
+let abTimer: NodeJS.Timer | null = null;
+export function startAbilityTimer() {
+    if (abTimer !== null) {
+        throw new Error('Ability timer is already started');
+    }
+    abTimer = setInterval(() => {
+        try {
+            checkAbility();
+        } catch (_) {
+            //
+        }
+    }, 10 * 60 * 1000);
+}
+
+export function stopAbilityTimer() {
+    if (abTimer !== null) {
+        clearInterval(abTimer);
+        abTimer = null;
     }
 }
 

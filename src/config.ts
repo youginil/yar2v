@@ -4,6 +4,34 @@ import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import { DataDir } from './constants';
 
+const Server: JSONSchemaType<Server> = {
+    type: 'object',
+    properties: {
+        id: {
+            type: 'string',
+        },
+        name: {
+            type: 'string',
+        },
+        host: {
+            type: 'string',
+        },
+        url: {
+            type: 'string',
+        },
+        cfg: {
+            type: 'string',
+        },
+        delay: {
+            type: 'number',
+        },
+        ability: {
+            type: 'number',
+        },
+    },
+    required: ['id', 'name', 'host', 'url', 'cfg', 'delay', 'ability'],
+};
+
 const schema: JSONSchemaType<Configuration> = {
     type: 'object',
     properties: {
@@ -16,60 +44,12 @@ const schema: JSONSchemaType<Configuration> = {
         },
         'servers.user': {
             type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                    },
-                    name: {
-                        type: 'string',
-                    },
-                    host: {
-                        type: 'string',
-                    },
-                    url: {
-                        type: 'string',
-                    },
-                    cfg: {
-                        type: 'string',
-                    },
-                    delay: {
-                        type: 'number',
-                        nullable: true,
-                    },
-                },
-                required: ['id', 'name', 'host', 'url', 'cfg'],
-            },
+            items: Server,
             default: [],
         },
         'servers.sub': {
             type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                    },
-                    name: {
-                        type: 'string',
-                    },
-                    host: {
-                        type: 'string',
-                    },
-                    url: {
-                        type: 'string',
-                    },
-                    cfg: {
-                        type: 'string',
-                    },
-                    delay: {
-                        type: 'number',
-                        nullable: true,
-                    },
-                },
-                required: ['id', 'name', 'host', 'url', 'cfg'],
-            },
+            items: Server,
             default: [],
         },
         server: {
@@ -201,5 +181,17 @@ export function getAllServers(): {
         userServers: config['servers.user'],
         subServers: config['servers.sub'],
     };
+}
+
+export function getCurrentServer(): Server | undefined {
+    const list = [config['servers.user'], config['servers.sub']];
+    for (let i = 0; i < list.length; i++) {
+        for (let j = 0; j < list[i].length; j++) {
+            const server = list[i][j];
+            if (server.id === config.server) {
+                return server;
+            }
+        }
+    }
 }
 

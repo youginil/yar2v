@@ -4,7 +4,8 @@ interface Server {
     host: string;
     url: string;
     cfg: string;
-    delay?: number;
+    delay: number;
+    ability: number;
 }
 
 interface Configuration {

@@ -8,9 +8,13 @@ const logger = createLogger({
         format.align(),
         format.printf(
             (info) =>
-                `${info.level} ${[info.timestamp]} ${[
-                    info.meta?.module ?? 'Default',
-                ]} ${info.message}`
+                `${info.level} ${[info.timestamp]} [${
+                    info.meta?.module ?? 'Global'
+                }] ${
+                    typeof info.message === 'object'
+                        ? JSON.stringify(info.message)
+                        : info.message
+                }`
         )
     ),
     transports: [
@@ -26,8 +30,26 @@ const logger = createLogger({
     ],
 });
 
+export const cslogger = createLogger({
+    level: 'debug',
+    format: format.combine(
+        format.align(),
+        format.colorize(),
+        format.printf(
+            (info) =>
+                `${info.level} [${info.meta?.module ?? 'Global'}] ${
+                    typeof info.message === 'object'
+                        ? JSON.stringify(info.message)
+                        : info.message
+                }`
+        )
+    ),
+    transports: [new transports.Console()],
+});
+
 export function setLoggerLevel(level: string) {
     logger.level = level;
+    cslogger.level = level;
 }
 
 export default logger;
