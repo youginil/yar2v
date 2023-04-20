@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import { DataDir } from './constants';
 import path from 'path';
+import { getConfig } from './config';
 
 type Parser = (url: string) => { name: string; host: string; ob: Outbound };
 
@@ -168,7 +169,11 @@ export class V2ray {
             await fs.mkdir(dir, { recursive: true });
         }
         const cfg: Omit<V2rayConfig, 'name' | 'host'> = {
-            log: { access: '', error: '', loglevel: 'info' },
+            log: {
+                access: '',
+                error: '',
+                loglevel: getConfig('v2ray.log.level'),
+            },
             inbounds: [
                 {
                     protocol: 'dokodemo-door',

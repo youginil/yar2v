@@ -104,9 +104,13 @@ const schema: JSONSchemaType<Configuration> = {
             type: 'number',
             default: 2100,
         },
-        'log.level': {
+        'v2ray.log.level': {
             type: 'string',
             default: 'debug',
+        },
+        'log.level': {
+            type: 'string',
+            default: 'info',
         },
     },
     required: [
@@ -126,6 +130,7 @@ const schema: JSONSchemaType<Configuration> = {
         'test.sock.port',
         'test.api.host',
         'test.api.port',
+        'v2ray.log.level',
         'log.level',
     ],
 };
