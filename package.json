@@ -2,7 +2,10 @@
     "name": "yar2v",
     "version": "1.0.0",
     "description": "",
-    "main": "index.js",
+    "main": "dist/main.js",
+    "bin": {
+        "yar2v": "dist/main.js"
+    },
     "scripts": {
         "dev": "node dist/main.js",
         "build": "rollup -c rollup.config.js"
