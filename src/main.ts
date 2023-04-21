@@ -2,7 +2,13 @@ import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import inquirer from 'inquirer';
 import { DataDir } from './constants';
-import { getAllServers, getConfig, loadConfig, setConfig } from './config';
+import {
+    getAllServers,
+    getConfig,
+    loadConfig,
+    saveCurrentServer,
+    setConfig,
+} from './config';
 import {
     checkConnection,
     pingServers,
@@ -55,7 +61,12 @@ async function selectAction() {
                     name: 'Clear Subcribed Servers',
                     value: 'clear-sub-servers',
                 },
+                {
+                    name: 'Save Current Server',
+                    value: 'save',
+                },
             ],
+            pageSize: 20,
         },
     ]);
     switch (answers.action) {
@@ -110,6 +121,16 @@ async function selectAction() {
         case 'clear-sub-servers':
             await setConfig('servers.sub', []);
             break;
+        case 'save':
+            try {
+                const server = await saveCurrentServer();
+                if (server) {
+                    console.log(`Saved [${server.name}] to user config`);
+                }
+            } catch (e) {
+                console.error(e.message);
+            }
+            break;
         default:
             console.error(`Invalid Action: ${answers.action}`);
     }
@@ -135,7 +156,9 @@ function compareServer(a: Server, b: Server) {
 }
 
 async function chooseServer() {
+    const curID = getConfig('server');
     const { userServers, subServers } = getAllServers();
+    const usids = userServers.map((item) => item.id);
     const servers = [...userServers, ...subServers];
     const len1 = servers.length.toString().length;
     const [len2, len3] = servers.reduce(
@@ -150,8 +173,10 @@ async function chooseServer() {
         .map((server, idx) => ({
             name: [
                 ' '.repeat(len1 - (idx + 1).toString().length),
+                curID === server.id ? '*' : ' ',
+                usids.includes(server.id) ? 'U' : 'S',
                 server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
-                server.ping.toString().padStart(len3 + 1, ' ') + 'ms  ',
+                server.ping.toString().padStart(len3 + 1, ' ') + 'ms',
                 server.name,
             ].join(' '),
             value: server.id,

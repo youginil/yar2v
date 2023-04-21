@@ -219,6 +219,22 @@ export function getAllServers(): {
     };
 }
 
+export function getCurServer(): Server | undefined {
+    const id = config['server'];
+    if (!id) {
+        return;
+    }
+    const list = [config['servers.user'], config['servers.sub']];
+    for (let i = 0; i < list.length; i++) {
+        for (let j = 0; j < list[i].length; j++) {
+            const server = list[i][j];
+            if (server.id === id) {
+                return server;
+            }
+        }
+    }
+}
+
 export function getCurrentServer(): Server | undefined {
     const list = [config['servers.user'], config['servers.sub']];
     for (let i = 0; i < list.length; i++) {
@@ -241,5 +257,24 @@ export function delSubServers(...ids: string[]) {
             }
         }
     });
+}
+
+export async function saveCurrentServer(): Promise<Server | undefined> {
+    const id = config['server'];
+    const userServers = config['servers.user'];
+    const subServers = config['servers.sub'];
+    for (let i = 0; i < userServers.length; i++) {
+        if (userServers[i].id === id) {
+            return;
+        }
+    }
+    for (let i = 0; i < subServers.length; i++) {
+        if (subServers[i].id === id) {
+            const [server] = subServers.splice(i, 1);
+            userServers.push(server);
+            await saveConfig();
+            return server;
+        }
+    }
 }
 
