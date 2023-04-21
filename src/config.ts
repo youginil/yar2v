@@ -219,8 +219,8 @@ export function getAllServers(): {
     };
 }
 
-export function getCurServer(): Server | undefined {
-    const id = config['server'];
+export function getServer(id?: string): Server | undefined {
+    id = id || config['server'];
     if (!id) {
         return;
     }
@@ -235,16 +235,8 @@ export function getCurServer(): Server | undefined {
     }
 }
 
-export function getCurrentServer(): Server | undefined {
-    const list = [config['servers.user'], config['servers.sub']];
-    for (let i = 0; i < list.length; i++) {
-        for (let j = 0; j < list[i].length; j++) {
-            const server = list[i][j];
-            if (server.id === config.server) {
-                return server;
-            }
-        }
-    }
+export function isUserServer(id: string): boolean {
+    return config['servers.user'].some((item) => item.id === id);
 }
 
 export function delSubServers(...ids: string[]) {
@@ -259,8 +251,7 @@ export function delSubServers(...ids: string[]) {
     });
 }
 
-export async function saveCurrentServer(): Promise<Server | undefined> {
-    const id = config['server'];
+export async function moveSub2User(id: string) {
     const userServers = config['servers.user'];
     const subServers = config['servers.sub'];
     for (let i = 0; i < userServers.length; i++) {
@@ -273,7 +264,23 @@ export async function saveCurrentServer(): Promise<Server | undefined> {
             const [server] = subServers.splice(i, 1);
             userServers.push(server);
             await saveConfig();
-            return server;
+        }
+    }
+}
+
+export async function moveUser2Sub(id: string) {
+    const userServers = config['servers.user'];
+    const subServers = config['servers.sub'];
+    for (let i = 0; i < subServers.length; i++) {
+        if (subServers[i].id === id) {
+            return;
+        }
+    }
+    for (let i = 0; i < userServers.length; i++) {
+        if (userServers[i].id === id) {
+            const [server] = userServers.splice(i, 1);
+            subServers.push(server);
+            await saveConfig();
         }
     }
 }

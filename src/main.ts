@@ -5,8 +5,11 @@ import { DataDir } from './constants';
 import {
     getAllServers,
     getConfig,
+    getServer,
+    isUserServer,
     loadConfig,
-    saveCurrentServer,
+    moveSub2User,
+    moveUser2Sub,
     setConfig,
 } from './config';
 import {
@@ -26,6 +29,16 @@ import {
 } from './task';
 import { setLoggerLevel } from './logger';
 
+async function tryRun(f: () => Promise<any>, printError = true) {
+    try {
+        await f();
+    } catch (e) {
+        if (printError) {
+            console.error(e.message);
+        }
+    }
+}
+
 async function selectAction() {
     const answers = await inquirer.prompt([
         {
@@ -34,7 +47,7 @@ async function selectAction() {
             type: 'rawlist',
             choices: [
                 {
-                    name: 'Choose Server',
+                    name: 'Servers',
                     value: 'servers',
                 },
                 {
@@ -61,51 +74,33 @@ async function selectAction() {
                     name: 'Clear Subcribed Servers',
                     value: 'clear-sub-servers',
                 },
-                {
-                    name: 'Save Current Server',
-                    value: 'save',
-                },
             ],
             pageSize: 20,
         },
     ]);
     switch (answers.action) {
         case 'status':
-            try {
+            await tryRun(async () => {
                 const stat = await runningStatus();
                 console.log(stat);
-            } catch (e) {
-                console.error(e);
-            }
+            });
             break;
         case 'servers':
             await chooseServer();
             break;
         case 'subscribe':
             stopSubTimer();
-            try {
-                await updateSubServers(true);
-            } catch (e) {
-                console.error(e.message);
-            }
+            await tryRun(async () => await updateSubServers(true));
             startSubTimer();
         case 'ping':
             stopPingTimer();
-            try {
-                await pingServers(true);
-            } catch (e) {
-                console.error(e);
-            }
+            await tryRun(async () => await pingServers(true));
             startPingTimer();
             await chooseServer();
             break;
         case 'connection':
             stopCheckTimer();
-            try {
-                await checkConnection(true);
-            } catch (e) {
-                //
-            }
+            await tryRun(async () => await checkConnection(true), false);
             startCheckTimer();
             await chooseServer();
             break;
@@ -120,16 +115,6 @@ async function selectAction() {
             break;
         case 'clear-sub-servers':
             await setConfig('servers.sub', []);
-            break;
-        case 'save':
-            try {
-                const server = await saveCurrentServer();
-                if (server) {
-                    console.log(`Saved [${server.name}] to user config`);
-                }
-            } catch (e) {
-                console.error(e.message);
-            }
             break;
         default:
             console.error(`Invalid Action: ${answers.action}`);
@@ -173,7 +158,7 @@ async function chooseServer() {
         .map((server, idx) => ({
             name: [
                 ' '.repeat(len1 - (idx + 1).toString().length),
-                curID === server.id ? '*' : ' ',
+                curID === server.id ? '@' : ' ',
                 usids.includes(server.id) ? 'U' : 'S',
                 server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
                 server.ping.toString().padStart(len3 + 1, ' ') + 'ms',
@@ -193,11 +178,50 @@ async function chooseServer() {
         },
     ]);
     if (answers.server) {
-        try {
-            await selectServer(answers.server);
-        } catch (e) {
-            console.error(e);
+        const server = getServer(answers.server);
+        if (server) {
+            const isus = isUserServer(server.id);
+            const answers = await inquirer.prompt([
+                {
+                    name: 'action',
+                    message: `What to do with [${server.name}]?`,
+                    type: 'rawlist',
+                    choices: [
+                        {
+                            name: 'Back',
+                            value: '',
+                        },
+                        {
+                            name: 'Active',
+                            value: 'active',
+                        },
+                        {
+                            name: isus
+                                ? 'Move to Subscribe Servers'
+                                : 'Move to User Servers',
+                            value: isus ? 'u2s' : 's2u',
+                        },
+                    ],
+                },
+            ]);
+            switch (answers.action) {
+                case 'active':
+                    await tryRun(async () => await selectServer(server.id));
+                    break;
+                case 'u2s':
+                    await tryRun(async () => await moveUser2Sub(server.id));
+                    break;
+                case 's2u':
+                    await tryRun(async () => await moveSub2User(server.id));
+                    break;
+                default:
+                    break;
+            }
+            await chooseServer();
+        } else {
+            console.warn(`Invalid Server`);
         }
+        await tryRun(async () => await selectServer(answers.server));
     }
 }
 
@@ -215,11 +239,7 @@ async function chooseServer() {
     const sid = getConfig('server');
     if (sid) {
         setTimeout(async () => {
-            try {
-                await selectServer(sid);
-            } catch (e) {
-                console.error(e);
-            }
+            await tryRun(async () => await selectServer(sid));
         }, 1000);
     }
 

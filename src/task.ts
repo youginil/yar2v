@@ -5,7 +5,7 @@ import {
     delSubServers,
     getAllServers,
     getConfig,
-    getCurrentServer,
+    getServer,
     saveConfig,
     setConfig,
 } from './config';
@@ -221,7 +221,7 @@ export function stopV2ray() {
 }
 
 export async function runningStatus() {
-    const curServer = getCurrentServer();
+    const curServer = getServer();
     return curServer ? curServer.name + ' ' + curServer.host : 'Not running';
 }
 
@@ -303,7 +303,8 @@ export async function checkConnection(print2console = false) {
         }
     }
     if (serversWillRemoved.length > 0) {
-        delSubServers(...serversWillRemoved);
+        // todo not accurate enough
+//         delSubServers(...serversWillRemoved);
     }
     await saveConfig();
 }
