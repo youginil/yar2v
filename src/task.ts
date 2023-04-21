@@ -126,7 +126,7 @@ export async function pingServers(print2console = false) {
                     } else {
                         s.ping = -1;
                         s.pingFailedTimes++;
-                        if (s.pingFailedTimes >= 10) {
+                        if (s.pingFailedTimes >= 10 && s.conn < 0) {
                             serversWillRemoved.push(s.id);
                         }
                     }
