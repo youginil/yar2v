@@ -149,14 +149,14 @@ async function chooseServer() {
         .sort(compareServer)
         .map((server, idx) => ({
             name: [
-                ' '.repeat(len1 - (idx + 2).toString().length),
+                ' '.repeat(len1 - (idx + 1).toString().length),
                 server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
                 server.ping.toString().padStart(len3 + 1, ' ') + 'ms  ',
                 server.name,
             ].join(' '),
             value: server.id,
         }));
-    choices.unshift({ name: 'Back', value: '' });
+    choices.push({ name: 'Back', value: '' });
     const answers = await inquirer.prompt([
         {
             name: 'server',
@@ -164,6 +164,7 @@ async function chooseServer() {
             type: 'rawlist',
             choices,
             pageSize: 20,
+            default: '',
         },
     ]);
     if (answers.server) {
