@@ -27,6 +27,9 @@ interface Configuration {
     'test.sock.port': number;
     'test.api.host': string;
     'test.api.port': number;
+    'sub.interval': number;
+    'ping.interval': number;
+    'conn.interval': number;
     'v2ray.log.level': 'debug' | 'info' | 'warning' | 'error' | 'none';
     'log.level': string;
 }

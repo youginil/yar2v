@@ -90,7 +90,7 @@ export function startSubTimer() {
         } catch (e) {
             logger.error(`Fail to update from  subscriber. ${e.toString()}`);
         }
-    }, 1 * 3600 * 1000);
+    }, getConfig('sub.interval') * 1000);
 }
 
 export function stopSubTimer() {
@@ -157,7 +157,7 @@ export function startPingTimer() {
         } catch (e) {
             logger.error(`Fail to ping. ${e.toString()}`);
         }
-    }, 2 * 60 * 1000);
+    }, getConfig('ping.interval') * 1000);
 }
 
 export function stopPingTimer() {
@@ -319,7 +319,7 @@ export function startCheckTimer() {
         } catch (_) {
             //
         }
-    }, 10 * 60 * 1000);
+    }, getConfig('conn.interval') * 1000);
 }
 
 export function stopCheckTimer() {

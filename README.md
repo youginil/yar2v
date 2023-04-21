@@ -45,4 +45,5 @@ npm i -g yar2v
 -   More config items
 -   More doc
 -   Save hot servers
+-   Auto select switcher
 

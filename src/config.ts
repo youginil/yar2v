@@ -120,6 +120,18 @@ const schema: JSONSchemaType<Configuration> = {
             type: 'number',
             default: 2100,
         },
+        'sub.interval': {
+            type: 'number',
+            default: 3600,
+        },
+        'ping.interval': {
+            type: 'number',
+            default: 120,
+        },
+        'conn.interval': {
+            type: 'number',
+            default: 10 * 60,
+        },
         'v2ray.log.level': {
             type: 'string',
             default: 'debug',
@@ -146,6 +158,9 @@ const schema: JSONSchemaType<Configuration> = {
         'test.sock.port',
         'test.api.host',
         'test.api.port',
+        'sub.interval',
+        'ping.interval',
+        'conn.interval',
         'v2ray.log.level',
         'log.level',
     ],
