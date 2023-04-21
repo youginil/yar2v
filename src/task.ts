@@ -243,12 +243,12 @@ export async function selectServer(id: string) {
 
 let isCheckingConnection = false;
 export async function checkConnection(print2console = false) {
-    const ablog = (print2console ? cslogger : logger).child({
-        module: 'Ability',
+    const cclog = (print2console ? cslogger : logger).child({
+        module: 'Connection',
     });
-    ablog.info(`Check ability`);
+    cclog.info(`Check connection`);
     if (isCheckingConnection) {
-        ablog.warn('The ability checking is in progress');
+        cclog.warn('The connection checking is in progress');
         return;
     }
     const { userServers, subServers } = getAllServers();
@@ -259,7 +259,6 @@ export async function checkConnection(print2console = false) {
     const request = axios.create({
         httpsAgent: createHttpsAgent(`http://${proxyHost}:${proxyPort}`),
         proxy: false,
-        timeout: 10 * 1000,
         headers: {
             'User-Agent':
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
@@ -271,25 +270,27 @@ export async function checkConnection(print2console = false) {
         if (server.ping < 0) {
             continue;
         }
-        ablog.info(`Checking [${server.name}] ${server.host}`);
+        cclog.info(`Checking [${server.name}] ${server.host}`);
         const totalTimes = 3;
         let tryTimes = 0;
         let connected = false;
         while (tryTimes < totalTimes) {
             tryTimes++;
-            ablog.info(`Trying (${tryTimes}/${totalTimes})...`);
+            cclog.info(`Trying (${tryTimes}/${totalTimes})...`);
             try {
                 await v2test.changeOutbound(JSON.parse(server.cfg));
                 const st = Date.now();
-                const res = await request.get(testUrl);
+                const res = await request.head(testUrl, {
+                    timeout: 5 * 1000 * tryTimes,
+                });
                 const dt = Date.now() - st;
                 server.conn = dt;
                 connected = true;
-                ablog.info(`${res.status} ${res.statusText} ${dt}ms`);
+                cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
                 break;
             } catch (e) {
                 server.conn = -1;
-                ablog.info(e.toString());
+                cclog.info(e.toString());
             }
         }
         if (connected) {
@@ -308,9 +309,9 @@ export async function checkConnection(print2console = false) {
 }
 
 let checkTimer: NodeJS.Timer | null = null;
-export function startAbilityTimer() {
+export function startCheckTimer() {
     if (checkTimer !== null) {
-        throw new Error('Ability timer is already started');
+        throw new Error('Check timer is already started');
     }
     checkTimer = setInterval(() => {
         try {
@@ -321,7 +322,7 @@ export function startAbilityTimer() {
     }, 10 * 60 * 1000);
 }
 
-export function stopAbilityTimer() {
+export function stopCheckTimer() {
     if (checkTimer !== null) {
         clearInterval(checkTimer);
         checkTimer = null;

@@ -6,17 +6,7 @@ const logger = createLogger({
     level: 'debug',
     format: format.combine(
         format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        format.align(),
-        format.printf(
-            (info) =>
-                `${info.level} ${[info.timestamp]} [${
-                    info.meta?.module ?? 'Global'
-                }] ${
-                    typeof info.message === 'object'
-                        ? JSON.stringify(info.message)
-                        : info.message
-                }`
-        )
+        format.json()
     ),
     transports: [
         new DailyRotateFile({
@@ -31,14 +21,13 @@ export const cslogger = createLogger({
     format: format.combine(
         format.align(),
         format.colorize(),
-        format.printf(
-            (info) =>
-                `${info.level} ${info.meta?.module ?? 'Global'} ${
-                    typeof info.message === 'object'
-                        ? JSON.stringify(info.message)
-                        : info.message
-                }`
-        )
+        format.printf((info) => {
+            return `${info.level} [${info.module ?? 'Global'}] ${
+                typeof info.message === 'object'
+                    ? JSON.stringify(info.message)
+                    : info.message
+            }`;
+        })
     ),
     transports: [new transports.Console()],
 });

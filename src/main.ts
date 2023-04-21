@@ -8,11 +8,11 @@ import {
     pingServers,
     runningStatus,
     selectServer,
-    startAbilityTimer,
+    startCheckTimer,
     startPingTimer,
     startSubTimer,
     startV2ray,
-    stopAbilityTimer,
+    stopCheckTimer,
     stopPingTimer,
     stopSubTimer,
     stopV2ray,
@@ -44,8 +44,8 @@ async function selectAction() {
                     value: 'ping',
                 },
                 {
-                    name: 'Check Ability',
-                    value: 'ability',
+                    name: 'Check Connection',
+                    value: 'connection',
                 },
                 {
                     name: 'Proxy Address',
@@ -88,14 +88,14 @@ async function selectAction() {
             startPingTimer();
             await chooseServer();
             break;
-        case 'ability':
-            stopAbilityTimer();
+        case 'connection':
+            stopCheckTimer();
             try {
                 await checkConnection(true);
             } catch (e) {
                 //
             }
-            startAbilityTimer();
+            startCheckTimer();
             await chooseServer();
             break;
         case 'proxy':
@@ -149,14 +149,14 @@ async function chooseServer() {
         .sort(compareServer)
         .map((server, idx) => ({
             name: [
-                ' '.repeat(len1 - (idx + 1).toString().length),
+                ' '.repeat(len1 - (idx + 2).toString().length),
                 server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
                 server.ping.toString().padStart(len3 + 1, ' ') + 'ms  ',
                 server.name,
             ].join(' '),
             value: server.id,
         }));
-    choices.push({ name: 'Back', value: '' });
+    choices.unshift({ name: 'Back', value: '' });
     const answers = await inquirer.prompt([
         {
             name: 'server',
@@ -184,7 +184,7 @@ async function chooseServer() {
     await startV2ray();
     startSubTimer();
     startPingTimer();
-    startAbilityTimer();
+    startCheckTimer();
 
     const sid = getConfig('server');
     if (sid) {
