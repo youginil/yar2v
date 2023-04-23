@@ -267,7 +267,7 @@ export async function checkConnection(print2console = false) {
     const serversWillRemoved: string[] = [];
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
-        if (server.ping < 0) {
+        if (server.ping < 0 && server.conn < 0) {
             continue;
         }
         cclog.info(`Checking [${server.name}] ${server.host}`);
@@ -304,7 +304,7 @@ export async function checkConnection(print2console = false) {
     }
     if (serversWillRemoved.length > 0) {
         // todo not accurate enough
-//         delSubServers(...serversWillRemoved);
+        //         delSubServers(...serversWillRemoved);
     }
     await saveConfig();
 }
