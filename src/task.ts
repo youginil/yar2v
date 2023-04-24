@@ -258,6 +258,7 @@ export async function checkConnection(print2console = false) {
     const testUrl = 'https://google.com/';
     const request = axios.create({
         httpsAgent: createHttpsAgent(`http://${proxyHost}:${proxyPort}`),
+        timeout: 10 * 1000,
         proxy: false,
         headers: {
             'User-Agent':
@@ -271,35 +272,22 @@ export async function checkConnection(print2console = false) {
             continue;
         }
         cclog.info(`Checking [${server.name}] ${server.host}`);
-        const totalTimes = 3;
-        let tryTimes = 0;
-        let connected = false;
-        while (tryTimes < totalTimes) {
-            tryTimes++;
-            cclog.info(`Trying (${tryTimes}/${totalTimes})...`);
-            try {
-                await v2test.changeOutbound(JSON.parse(server.cfg));
-                const st = Date.now();
-                const res = await request.head(testUrl, {
-                    timeout: 5 * 1000 * tryTimes,
-                });
-                const dt = Date.now() - st;
-                server.conn = dt;
-                connected = true;
-                cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
-                break;
-            } catch (e) {
-                server.conn = -1;
-                cclog.info(e.toString());
-            }
-        }
-        if (connected) {
+        try {
+            await v2test.changeOutbound(JSON.parse(server.cfg));
+            const st = Date.now();
+            const res = await request.head(testUrl);
+            const dt = Date.now() - st;
+            server.conn = dt;
             server.connFailedTimes = 0;
-        } else {
+            cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
+            break;
+        } catch (e) {
+            server.conn = -1;
             server.connFailedTimes++;
             if (server.connFailedTimes >= 10) {
                 serversWillRemoved.push(server.id);
             }
+            cclog.info(e.toString());
         }
     }
     if (serversWillRemoved.length > 0) {
