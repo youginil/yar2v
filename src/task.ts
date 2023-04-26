@@ -116,7 +116,8 @@ export async function pingServers(print2console = false) {
     }
     const serversWillRemoved: string[] = [];
     await Promise.allSettled(
-        servers.map(async (s) => {
+        servers.map(async (s, idx) => {
+            const isUserServer = idx < userServers.length;
             return ping.promise
                 .probe(s.host, { timeout: 10 })
                 .then((result) => {
@@ -126,7 +127,11 @@ export async function pingServers(print2console = false) {
                     } else {
                         s.ping = -1;
                         s.pingFailedTimes++;
-                        if (s.pingFailedTimes >= 10 && s.conn < 0) {
+                        if (
+                            !isUserServer &&
+                            s.pingFailedTimes >= 10 &&
+                            s.conn < 0
+                        ) {
                             serversWillRemoved.push(s.id);
                         }
                     }
@@ -141,6 +146,28 @@ export async function pingServers(print2console = false) {
     );
     if (serversWillRemoved.length > 0) {
         delSubServers(...serversWillRemoved);
+    }
+    const maxSubServers = getConfig('sub.max');
+    if (subServers.length > maxSubServers) {
+        subServers.sort((a, b) => {
+            if (a.conn === b.conn) {
+                if (a.ping < 0) {
+                    return 1;
+                }
+                if (b.ping < 0) {
+                    return -1;
+                }
+                return a.ping - b.ping;
+            }
+            if (a.conn < 0) {
+                return 1;
+            }
+            if (b.conn < 0) {
+                return -1;
+            }
+            return a.conn - b.conn;
+        });
+        subServers.splice(0, maxSubServers);
     }
     await saveConfig();
 }
@@ -268,7 +295,7 @@ export async function checkConnection(print2console = false) {
     const serversWillRemoved: string[] = [];
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
-        if (server.ping < 0 && server.conn < 0) {
+        if (server.ping < 0) {
             continue;
         }
         cclog.info(`Checking [${server.name}] ${server.host}`);
@@ -280,7 +307,6 @@ export async function checkConnection(print2console = false) {
             server.conn = dt;
             server.connFailedTimes = 0;
             cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
-            break;
         } catch (e) {
             server.conn = -1;
             server.connFailedTimes++;

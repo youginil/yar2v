@@ -122,7 +122,11 @@ const schema: JSONSchemaType<Configuration> = {
         },
         'sub.interval': {
             type: 'number',
-            default: 3600,
+            default: 1800,
+        },
+        'sub.max': {
+            type: 'number',
+            default: 50,
         },
         'ping.interval': {
             type: 'number',
@@ -134,7 +138,7 @@ const schema: JSONSchemaType<Configuration> = {
         },
         'v2ray.log.level': {
             type: 'string',
-            default: 'debug',
+            default: 'none',
         },
         'log.level': {
             type: 'string',
