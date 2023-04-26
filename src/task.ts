@@ -167,7 +167,7 @@ export async function pingServers(print2console = false) {
             }
             return a.conn - b.conn;
         });
-        subServers.splice(0, maxSubServers);
+        subServers.splice(maxSubServers);
     }
     await saveConfig();
 }
