@@ -31,9 +31,6 @@ const Server: JSONSchemaType<Server> = {
         conn: {
             type: 'number',
         },
-        connFailedTimes: {
-            type: 'number',
-        },
     },
     required: [
         'id',
@@ -44,7 +41,6 @@ const Server: JSONSchemaType<Server> = {
         'ping',
         'pingFailedTimes',
         'conn',
-        'connFailedTimes',
     ],
 };
 
@@ -123,10 +119,6 @@ const schema: JSONSchemaType<Configuration> = {
         'sub.interval': {
             type: 'number',
             default: 1800,
-        },
-        'sub.max': {
-            type: 'number',
-            default: 50,
         },
         'ping.interval': {
             type: 'number',

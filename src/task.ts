@@ -6,6 +6,7 @@ import {
     getAllServers,
     getConfig,
     getServer,
+    moveSub2User,
     saveConfig,
     setConfig,
 } from './config';
@@ -64,7 +65,6 @@ export async function updateSubServers(print2console = false) {
                                 ping: -1,
                                 pingFailedTimes: 0,
                                 conn: -1,
-                                connFailedTimes: 0,
                             });
                             uplog.info(`${item}`);
                         }
@@ -147,28 +147,6 @@ export async function pingServers(print2console = false) {
     if (serversWillRemoved.length > 0) {
         delSubServers(...serversWillRemoved);
     }
-    const maxSubServers = getConfig('sub.max');
-    if (subServers.length > maxSubServers) {
-        subServers.sort((a, b) => {
-            if (a.conn === b.conn) {
-                if (a.ping < 0) {
-                    return 1;
-                }
-                if (b.ping < 0) {
-                    return -1;
-                }
-                return a.ping - b.ping;
-            }
-            if (a.conn < 0) {
-                return 1;
-            }
-            if (b.conn < 0) {
-                return -1;
-            }
-            return a.conn - b.conn;
-        });
-        subServers.splice(maxSubServers);
-    }
     await saveConfig();
 }
 
@@ -212,7 +190,6 @@ export function addUserConfig(url: string): string | undefined {
         ping: -1,
         pingFailedTimes: 0,
         conn: -1,
-        connFailedTimes: 0,
     });
 }
 
@@ -292,7 +269,6 @@ export async function checkConnection(print2console = false) {
                 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
         },
     });
-    const serversWillRemoved: string[] = [];
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
         if (server.ping < 0) {
@@ -305,20 +281,12 @@ export async function checkConnection(print2console = false) {
             const res = await request.head(testUrl);
             const dt = Date.now() - st;
             server.conn = dt;
-            server.connFailedTimes = 0;
+            moveSub2User(server.id);
             cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
         } catch (e) {
             server.conn = -1;
-            server.connFailedTimes++;
-            if (server.connFailedTimes >= 10) {
-                serversWillRemoved.push(server.id);
-            }
             cclog.info(e.toString());
         }
-    }
-    if (serversWillRemoved.length > 0) {
-        // todo not accurate enough
-        //         delSubServers(...serversWillRemoved);
     }
     await saveConfig();
 }
