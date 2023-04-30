@@ -122,7 +122,7 @@ const schema: JSONSchemaType<Configuration> = {
         },
         'ping.interval': {
             type: 'number',
-            default: 120,
+            default: 5 * 60,
         },
         'conn.interval': {
             type: 'number',

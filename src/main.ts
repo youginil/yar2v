@@ -71,7 +71,11 @@ async function selectAction() {
                     value: 'proxy',
                 },
                 {
-                    name: 'Clear Subcribed Servers',
+                    name: 'Clear User Servers',
+                    value: 'clear-user-servers',
+                },
+                {
+                    name: 'Clear Sub Servers',
                     value: 'clear-sub-servers',
                 },
             ],
@@ -115,6 +119,9 @@ async function selectAction() {
             break;
         case 'clear-sub-servers':
             await setConfig('servers.sub', []);
+            break;
+        case 'clear-user-servers':
+            await setConfig('servers.user', []);
             break;
         default:
             console.error(`Invalid Action: ${answers.action}`);

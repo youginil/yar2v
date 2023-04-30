@@ -129,7 +129,7 @@ export async function pingServers(print2console = false) {
                         s.pingFailedTimes++;
                         if (
                             !isUserServer &&
-                            s.pingFailedTimes >= 10 &&
+                            s.pingFailedTimes >= 3 &&
                             s.conn < 0
                         ) {
                             serversWillRemoved.push(s.id);
