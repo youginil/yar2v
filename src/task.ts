@@ -272,6 +272,7 @@ export async function checkConnection(print2console = false) {
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
         if (server.ping < 0) {
+            server.conn = -1;
             continue;
         }
         cclog.info(`Checking [${server.name}] ${server.host}`);
