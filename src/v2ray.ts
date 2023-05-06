@@ -91,8 +91,8 @@ const parseVmess: Parser = (url: string) => {
                     ? {
                           headers: {
                               Host: data.host || '',
-                              path: data.path || '/',
                           },
+                          path: data.path,
                       }
                     : undefined,
             httpSettings: ['h2', 'http'].includes(data.net)
