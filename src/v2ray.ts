@@ -53,6 +53,71 @@ const parseVmess: Parser = (url: string) => {
                           allowInsecure: data.allowInsecure ?? true,
                       }
                     : undefined,
+            tcpSettings:
+                data.net === 'tcp'
+                    ? {
+                          header:
+                              data.type === 'http'
+                                  ? {
+                                        type: 'http',
+                                        request: {
+                                            headers: {
+                                                Host: data.host || '',
+                                                path: (data.path || '')
+                                                    .split(',')
+                                                    .map((item: string) =>
+                                                        item.trim()
+                                                    )
+                                                    .filter(
+                                                        (item: string) => !!item
+                                                    ),
+                                            },
+                                        },
+                                    }
+                                  : { type: 'none' },
+                      }
+                    : undefined,
+            kcpSettings:
+                data.net === 'kcp'
+                    ? {
+                          header: {
+                              type: data.type || 'none',
+                          },
+                          seed: data.path,
+                      }
+                    : undefined,
+            wsSettings:
+                data.net === 'ws'
+                    ? {
+                          headers: {
+                              Host: data.host || '',
+                              path: data.path || '/',
+                          },
+                      }
+                    : undefined,
+            httpSettings: ['h2', 'http'].includes(data.net)
+                ? {
+                      host: (data.host || '')
+                          .split(',')
+                          .map((item: string) => item.trim())
+                          .filter((item: string) => !!item),
+                      path: data.path || '/',
+                  }
+                : undefined,
+            quicSettings:
+                data.net === 'quic'
+                    ? {
+                          security: data.host || 'none',
+                          key: data.path,
+                          header: { type: data.type || 'none' },
+                      }
+                    : undefined,
+            grpcSettings:
+                data.net === 'grpc'
+                    ? {
+                          serviceName: data.path,
+                      }
+                    : undefined,
         },
     };
     return { name, host: data.add, ob };

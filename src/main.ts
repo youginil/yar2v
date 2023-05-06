@@ -14,6 +14,7 @@ import {
 } from './config';
 import {
     checkConnection,
+    importConfig,
     pingServers,
     runningStatus,
     selectServer,
@@ -55,6 +56,10 @@ async function selectAction() {
                     value: 'status',
                 },
                 {
+                    name: 'Import',
+                    value: 'import',
+                },
+                {
                     name: 'Subscribe',
                     value: 'subscribe',
                 },
@@ -91,6 +96,22 @@ async function selectAction() {
             break;
         case 'servers':
             await chooseServer();
+            break;
+        case 'import':
+            const ans = await inquirer.prompt([
+                {
+                    name: 'url',
+                    message: 'Enter URL',
+                    type: 'input',
+                },
+            ]);
+            const url = ans.url.trim();
+            if (url) {
+                await tryRun(async () => {
+                    await importConfig(url);
+                });
+                await chooseServer();
+            }
             break;
         case 'subscribe':
             stopSubTimer();

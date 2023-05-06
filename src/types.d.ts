@@ -140,27 +140,27 @@ type StreamSettings = Partial<{
         verifyClientCertificate: boolean;
         pinnedPeerCertificateChainSha256: string;
     }>;
-    tcpSettings: {
+    tcpSettings: Partial<{
         acceptProxyProtocol: boolean;
         header:
             | { type: 'none' }
             | {
                   type: 'http';
-                  request: {
+                  request: Partial<{
                       version: string;
                       method: string;
                       path: string[];
                       headers: Record<string, string | string[]>;
-                  };
-                  response: {
+                  }>;
+                  response?: {
                       version: string;
                       status: string;
                       reason: string;
                       headers: Record<string, string | string[]>;
                   };
               };
-    };
-    kcpSettings: {
+    }>;
+    kcpSettings: Partial<{
         mtu: number;
         tti: number;
         uplinkCapacity: number;
@@ -178,22 +178,22 @@ type StreamSettings = Partial<{
                 | 'wireguard';
         };
         seed: string;
-    };
-    wsSettings: {
+    }>;
+    wsSettings: Partial<{
         acceptProxyProtocol: boolean;
         path: string;
         headers: Record<string, string>;
         maxEarlyData: number;
         useBrowserForwarding: boolean;
         earlyDataHeaderName: string;
-    };
-    httpSettings: {
+    }>;
+    httpSettings: Partial<{
         host: string[];
         path: string;
         method: string;
         headers: Record<string, string[]>;
-    };
-    quicSettings: {
+    }>;
+    quicSettings: Partial<{
         security: 'none' | 'aes-128-gcm' | 'chacha20-poly1305';
         key: string;
         header: {
@@ -205,7 +205,7 @@ type StreamSettings = Partial<{
                 | 'dtls'
                 | 'wireguard';
         };
-    };
+    }>;
     dsSettings: {
         path: string;
         abstract: boolean;

@@ -15,12 +15,30 @@ import logger, { cslogger } from './logger';
 import path from 'path';
 import { DataDir } from './constants';
 
-let isUpdatingFromSub = false;
-
 function generateServerID() {
     return Date.now() + '-' + Math.random();
 }
 
+export async function importConfig(url: string) {
+    const cfg = parseURL(url);
+    if (!cfg) {
+        throw new Error('Invalid url');
+    }
+    const userServers = getConfig('servers.user');
+    userServers.push({
+        id: generateServerID(),
+        name: cfg.name,
+        host: cfg.host,
+        url,
+        cfg: JSON.stringify(cfg),
+        ping: -1,
+        pingFailedTimes: 0,
+        conn: -1,
+    });
+    await saveConfig();
+}
+
+let isUpdatingFromSub = false;
 export async function updateSubServers(print2console = false) {
     const uplog = (print2console ? cslogger : logger).child({
         module: 'subscribe',
