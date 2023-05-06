@@ -277,7 +277,7 @@ export async function checkConnection(print2console = false) {
     const proxyHost = getConfig('test.http.host');
     const proxyPort = getConfig('test.http.port');
     const servers = [...userServers, ...subServers];
-    const testUrl = 'https://google.com/';
+    const testUrl = 'https://www.google.com/generate_204';
     const request = axios.create({
         httpsAgent: createHttpsAgent(`http://${proxyHost}:${proxyPort}`),
         timeout: 10 * 1000,
