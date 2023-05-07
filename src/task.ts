@@ -33,7 +33,9 @@ export async function importConfig(url: string) {
         cfg: JSON.stringify(cfg),
         ping: -1,
         pingFailedTimes: 0,
+        pingTime: 0,
         conn: -1,
+        connTime: 0,
     });
     await saveConfig();
 }
@@ -82,7 +84,9 @@ export async function updateSubServers(print2console = false) {
                                 cfg: JSON.stringify(cfg),
                                 ping: -1,
                                 pingFailedTimes: 0,
+                                pingTime: 0,
                                 conn: -1,
+                                connTime: 0,
                             });
                             uplog.info(`${item}`);
                         }
@@ -136,6 +140,7 @@ export async function pingServers(print2console = false) {
     await Promise.allSettled(
         servers.map(async (s, idx) => {
             const isUserServer = idx < userServers.length;
+            s.pingTime = Date.now();
             return ping.promise
                 .probe(s.host, { timeout: 10 })
                 .then((result) => {
@@ -207,7 +212,9 @@ export function addUserConfig(url: string): string | undefined {
         cfg: JSON.stringify(cfg),
         ping: -1,
         pingFailedTimes: 0,
+        pingTime: 0,
         conn: -1,
+        connTime: 0,
     });
 }
 
@@ -300,6 +307,7 @@ export async function checkConnection(print2console = false) {
             const res = await request.head(testUrl);
             const dt = Date.now() - st;
             server.conn = dt;
+            server.connTime = st;
             moveSub2User(server.id);
             cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
         } catch (e) {
@@ -329,5 +337,26 @@ export function stopCheckTimer() {
         clearInterval(checkTimer);
         checkTimer = null;
     }
+}
+
+export async function clearNotConnectedServers(): Promise<number> {
+    const { userServers, subServers } = getAllServers();
+    const list = [userServers, subServers];
+    let n = 0;
+    for (let i = 0; i < list.length; i++) {
+        const ss = list[i];
+        for (let j = 0; j < ss.length; j++) {
+            const server = ss[j];
+            if (server.conn < 0) {
+                ss.splice(j, 1);
+                j--;
+                n++;
+            }
+        }
+    }
+    if (n > 0) {
+        await saveConfig();
+    }
+    return n;
 }
 

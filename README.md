@@ -42,8 +42,4 @@ npm i -g yar2v
 
 ## TODO
 
--   More config items
--   More doc
--   Save hot servers
--   Auto select switcher
-
+- check selected server every minute -> if unavailable, check all and select fatest server

@@ -14,6 +14,7 @@ import {
 } from './config';
 import {
     checkConnection,
+    clearNotConnectedServers,
     importConfig,
     pingServers,
     runningStatus,
@@ -38,6 +39,18 @@ async function tryRun(f: () => Promise<any>, printError = true) {
             console.error(e.message);
         }
     }
+}
+
+function ts2str(ts: number) {
+    if (ts === 0) {
+        return '--:--';
+    }
+    const t = new Date(ts);
+    return (
+        `${t.getHours()}`.padStart(2, '0') +
+        ':' +
+        `${t.getMinutes()}`.padStart(2, '0')
+    );
 }
 
 async function selectAction() {
@@ -82,6 +95,10 @@ async function selectAction() {
                 {
                     name: 'Clear Sub Servers',
                     value: 'clear-sub-servers',
+                },
+                {
+                    name: 'Clear Not-Connected Servers',
+                    value: 'clear-not-connected',
                 },
             ],
             pageSize: 20,
@@ -144,6 +161,10 @@ async function selectAction() {
         case 'clear-user-servers':
             await setConfig('servers.user', []);
             break;
+        case 'clear-not-connected':
+            const n = await clearNotConnectedServers();
+            console.log(`${n} server(s) removed`);
+            break;
         default:
             console.error(`Invalid Action: ${answers.action}`);
     }
@@ -189,7 +210,9 @@ async function chooseServer() {
                 curID === server.id ? '@' : ' ',
                 usids.includes(server.id) ? 'U' : 'S',
                 server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
+                ts2str(server.connTime),
                 server.ping.toString().padStart(len3 + 1, ' ') + 'ms',
+                ts2str(server.pingTime),
                 server.name,
             ].join(' '),
             value: server.id,

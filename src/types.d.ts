@@ -6,7 +6,9 @@ interface Server {
     cfg: string;
     ping: number;
     pingFailedTimes: number;
+    pingTime: number;
     conn: number;
+    connTime: number;
 }
 
 interface Configuration {

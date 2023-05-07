@@ -28,8 +28,16 @@ const Server: JSONSchemaType<Server> = {
         pingFailedTimes: {
             type: 'number',
         },
+        pingTime: {
+            type: 'number',
+            default: 0,
+        },
         conn: {
             type: 'number',
+        },
+        connTime: {
+            type: 'number',
+            default: 0,
         },
     },
     required: [
