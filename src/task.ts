@@ -203,7 +203,7 @@ export async function checkConnection(print2console = false) {
     const proxyHost = getConfig('test.http.host');
     const proxyPort = getConfig('test.http.port');
     const servers = [...userServers, ...subServers];
-    const testUrl = 'https://www.google.com/generate_204';
+    const testUrl = 'https://www.google.com/';
     const request = axios.create({
         httpsAgent: new HttpsProxyAgent(`http://${proxyHost}:${proxyPort}`),
         timeout: getConfig('conn.timeout') * 1000,
@@ -219,7 +219,7 @@ export async function checkConnection(print2console = false) {
         try {
             await v2test.changeOutbound(JSON.parse(server.cfg));
             const st = Date.now();
-            const res = await request.get(testUrl);
+            const res = await request.head(testUrl);
             const dt = Date.now() - st;
             server.conn = dt;
             server.connFails = 0;
