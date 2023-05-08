@@ -14,7 +14,6 @@ import {
 } from './config';
 import {
     checkConnection,
-    clearFailedServers,
     importConfig,
     runningStatus,
     selectServer,
@@ -89,10 +88,6 @@ async function selectAction() {
                     name: 'Clear Sub Servers',
                     value: 'clear-sub-servers',
                 },
-                {
-                    name: 'Clear Failed Servers',
-                    value: 'clear-failed',
-                },
             ],
             pageSize: 20,
         },
@@ -147,10 +142,6 @@ async function selectAction() {
             break;
         case 'clear-user-servers':
             await setConfig('servers.user', []);
-            break;
-        case 'clear-failed':
-            const n = await clearFailedServers();
-            console.log(`${n} server(s) removed`);
             break;
         default:
             console.error(`Invalid Action: ${answers.action}`);

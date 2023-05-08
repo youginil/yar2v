@@ -233,6 +233,17 @@ export async function checkConnection(print2console = false) {
             server.connTime = Date.now();
         }
     }
+    const list = [userServers, subServers];
+    for (let i = 0; i < list.length; i++) {
+        const ss = list[i];
+        for (let j = 0; j < ss.length; j++) {
+            const server = ss[j];
+            if (server.connFails > 3) {
+                ss.splice(j, 1);
+                j--;
+            }
+        }
+    }
     await saveConfig();
 }
 
@@ -255,26 +266,5 @@ export function stopCheckTimer() {
         clearInterval(checkTimer);
         checkTimer = null;
     }
-}
-
-export async function clearFailedServers(): Promise<number> {
-    const { userServers, subServers } = getAllServers();
-    const list = [userServers, subServers];
-    let n = 0;
-    for (let i = 0; i < list.length; i++) {
-        const ss = list[i];
-        for (let j = 0; j < ss.length; j++) {
-            const server = ss[j];
-            if (server.connFails > 3) {
-                ss.splice(j, 1);
-                j--;
-                n++;
-            }
-        }
-    }
-    if (n > 0) {
-        await saveConfig();
-    }
-    return n;
 }
 
