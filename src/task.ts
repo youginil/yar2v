@@ -1,5 +1,5 @@
 import axios from 'axios';
-import createHttpsAgent from 'https-proxy-agent';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import {
     getAllServers,
     getConfig,
@@ -205,7 +205,7 @@ export async function checkConnection(print2console = false) {
     const servers = [...userServers, ...subServers];
     const testUrl = 'https://www.google.com/generate_204';
     const request = axios.create({
-        httpsAgent: createHttpsAgent(`http://${proxyHost}:${proxyPort}`),
+        httpsAgent: new HttpsProxyAgent(`http://${proxyHost}:${proxyPort}`),
         timeout: getConfig('conn.timeout') * 1000,
         proxy: false,
         headers: {
@@ -219,7 +219,7 @@ export async function checkConnection(print2console = false) {
         try {
             await v2test.changeOutbound(JSON.parse(server.cfg));
             const st = Date.now();
-            const res = await request.head(testUrl);
+            const res = await request.get(testUrl);
             const dt = Date.now() - st;
             server.conn = dt;
             server.connFails = 0;
