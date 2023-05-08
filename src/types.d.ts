@@ -4,9 +4,6 @@ interface Server {
     host: string;
     url: string;
     cfg: string;
-    ping: number;
-    pingFailedTimes: number;
-    pingTime: number;
     conn: number;
     connTime: number;
 }
@@ -29,7 +26,6 @@ interface Configuration {
     'test.api.host': string;
     'test.api.port': number;
     'sub.interval': number;
-    'ping.interval': number;
     'conn.interval': number;
     'v2ray.log.level': 'debug' | 'info' | 'warning' | 'error' | 'none';
     'log.level': string;

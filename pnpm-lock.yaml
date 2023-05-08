@@ -13,9 +13,6 @@ dependencies:
   inquirer:
     specifier: ^9.1.5
     version: 9.1.5
-  ping:
-    specifier: ^0.4.4
-    version: 0.4.4
   winston:
     specifier: ^3.8.2
     version: 3.8.2
@@ -33,9 +30,6 @@ devDependencies:
   '@types/node':
     specifier: ^18.15.11
     version: 18.15.11
-  '@types/ping':
-    specifier: ^0.4.1
-    version: 0.4.1
   prettier:
     specifier: ^2.8.7
     version: 2.8.7
@@ -108,10 +102,6 @@ packages:
 
   /@types/node@18.15.11:
     resolution: {integrity: sha512-E5Kwq2n4SbMzQOn6wnmBjuK9ouqlURrcZDVfbo9ftDDTFt3nk7ZKK4GMOzoYgnpQJKcxwQw+lGaBvvlMo0qN/Q==}
-    dev: true
-
-  /@types/ping@0.4.1:
-    resolution: {integrity: sha512-q/D+xQvoqrHvntvz2A0Pb0ImYwnN3zakluUp8O2qoogGoVMVbdY2K/ulxHcCh9TzYzVoojayHBa9gYQDIZ4v0A==}
     dev: true
 
   /@types/through@0.0.30:
@@ -568,11 +558,6 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
     dev: true
-
-  /ping@0.4.4:
-    resolution: {integrity: sha512-56ZMC0j7SCsMMLdOoUg12VZCfj/+ZO+yfOSjaNCRrmZZr6GLbN2X/Ui56T15dI8NhiHckaw5X2pvyfAomanwqQ==}
-    engines: {node: '>=4.0.0'}
-    dev: false
 
   /prettier@2.8.7:
     resolution: {integrity: sha512-yPngTo3aXUUmyuTjeTUT75txrf+aMh9FiD7q9ZE/i6r0bPb22g4FsE6Y338PQX1bmfy08i9QQCB7/rcUAVntfw==}

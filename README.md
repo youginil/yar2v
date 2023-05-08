@@ -9,7 +9,6 @@ The project is not allowed for illegal intention
 ## Features
 
 -   Auto pull from subscribed address
--   Auto ping
 -   Auto check servers are able to connect to google.com
 
 ## Requirement
@@ -28,7 +27,7 @@ npm i -g yar2v
 ## Usage
 
 1. Execute `yar2v` in terminal
-2. If you are first to start it, select `Subscribe` to pull servers, and select `Check Ability` to check those servers are available or not. `Subscribe`, `Ping` and `Check Ability` auto run periodically, you can also run them manually.
+2. If you are first to start it, select `Subscribe` to pull servers, and select `Check Ability` to check those servers are available or not. `Subscribe`, and `Check Ability` auto run periodically, you can also run them manually.
 3. Select `Proxy Address` to show proxy settings
 4. Configure your app to connect to the proxy server
 
@@ -42,4 +41,5 @@ npm i -g yar2v
 
 ## TODO
 
-- check selected server every minute -> if unavailable, check all and select fatest server
+-   check selected server every minute -> if unavailable, check all and select fatest server
+

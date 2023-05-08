@@ -16,15 +16,12 @@ import {
     checkConnection,
     clearNotConnectedServers,
     importConfig,
-    pingServers,
     runningStatus,
     selectServer,
     startCheckTimer,
-    startPingTimer,
     startSubTimer,
     startV2ray,
     stopCheckTimer,
-    stopPingTimer,
     stopSubTimer,
     stopV2ray,
     updateSubServers,
@@ -75,10 +72,6 @@ async function selectAction() {
                 {
                     name: 'Subscribe',
                     value: 'subscribe',
-                },
-                {
-                    name: 'Ping',
-                    value: 'ping',
                 },
                 {
                     name: 'Check Connection',
@@ -134,12 +127,6 @@ async function selectAction() {
             stopSubTimer();
             await tryRun(async () => await updateSubServers(true));
             startSubTimer();
-        case 'ping':
-            stopPingTimer();
-            await tryRun(async () => await pingServers(true));
-            startPingTimer();
-            await chooseServer();
-            break;
         case 'connection':
             stopCheckTimer();
             await tryRun(async () => await checkConnection(true), false);
@@ -171,15 +158,6 @@ async function selectAction() {
 }
 
 function compareServer(a: Server, b: Server) {
-    if (a.conn === b.conn) {
-        if (a.ping < 0) {
-            return 1;
-        }
-        if (b.ping < 0) {
-            return -1;
-        }
-        return a.ping - b.ping;
-    }
     if (a.conn < 0) {
         return 1;
     }
@@ -195,12 +173,9 @@ async function chooseServer() {
     const usids = userServers.map((item) => item.id);
     const servers = [...userServers, ...subServers];
     const len1 = servers.length.toString().length;
-    const [len2, len3] = servers.reduce(
-        (r, item) => [
-            Math.max(r[0], item.conn.toString().length),
-            Math.max(r[1], item.ping.toString().length),
-        ],
-        [0, 0]
+    const len2 = servers.reduce(
+        (r, item) => Math.max(r, item.conn.toString().length),
+        0
     );
     const choices: { name: string; value: string }[] = servers
         .sort(compareServer)
@@ -211,8 +186,6 @@ async function chooseServer() {
                 usids.includes(server.id) ? 'U' : 'S',
                 server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
                 ts2str(server.connTime),
-                server.ping.toString().padStart(len3 + 1, ' ') + 'ms',
-                ts2str(server.pingTime),
                 server.name,
             ].join(' '),
             value: server.id,
@@ -284,7 +257,6 @@ async function chooseServer() {
     setLoggerLevel(getConfig('log.level'));
     await startV2ray();
     startSubTimer();
-    startPingTimer();
     startCheckTimer();
 
     const sid = getConfig('server');

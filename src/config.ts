@@ -22,16 +22,6 @@ const Server: JSONSchemaType<Server> = {
         cfg: {
             type: 'string',
         },
-        ping: {
-            type: 'number',
-        },
-        pingFailedTimes: {
-            type: 'number',
-        },
-        pingTime: {
-            type: 'number',
-            default: 0,
-        },
         conn: {
             type: 'number',
         },
@@ -40,16 +30,7 @@ const Server: JSONSchemaType<Server> = {
             default: 0,
         },
     },
-    required: [
-        'id',
-        'name',
-        'host',
-        'url',
-        'cfg',
-        'ping',
-        'pingFailedTimes',
-        'conn',
-    ],
+    required: ['id', 'name', 'host', 'url', 'cfg', 'conn', 'connTime'],
 };
 
 const schema: JSONSchemaType<Configuration> = {
@@ -128,10 +109,6 @@ const schema: JSONSchemaType<Configuration> = {
             type: 'number',
             default: 1800,
         },
-        'ping.interval': {
-            type: 'number',
-            default: 5 * 60,
-        },
         'conn.interval': {
             type: 'number',
             default: 10 * 60,
@@ -163,7 +140,6 @@ const schema: JSONSchemaType<Configuration> = {
         'test.api.host',
         'test.api.port',
         'sub.interval',
-        'ping.interval',
         'conn.interval',
         'v2ray.log.level',
         'log.level',

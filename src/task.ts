@@ -1,8 +1,6 @@
 import axios from 'axios';
-import ping from 'ping';
 import createHttpsAgent from 'https-proxy-agent';
 import {
-    delSubServers,
     getAllServers,
     getConfig,
     getServer,
@@ -31,9 +29,6 @@ export async function importConfig(url: string) {
         host: cfg.host,
         url,
         cfg: JSON.stringify(cfg),
-        ping: -1,
-        pingFailedTimes: 0,
-        pingTime: 0,
         conn: -1,
         connTime: 0,
     });
@@ -82,9 +77,6 @@ export async function updateSubServers(print2console = false) {
                                 host: cfg.host,
                                 url: item,
                                 cfg: JSON.stringify(cfg),
-                                ping: -1,
-                                pingFailedTimes: 0,
-                                pingTime: 0,
                                 conn: -1,
                                 connTime: 0,
                             });
@@ -122,79 +114,6 @@ export function stopSubTimer() {
     }
 }
 
-let pinging = false;
-export async function pingServers(print2console = false) {
-    const pinglog = (print2console ? cslogger : logger).child({
-        module: 'ping',
-    });
-    pinglog.info('Ping...');
-    if (pinging) {
-        throw new Error('Pinging');
-    }
-    const { userServers, subServers } = getAllServers();
-    const servers = [...userServers, ...subServers];
-    if (servers.length === 0) {
-        return;
-    }
-    const serversWillRemoved: string[] = [];
-    await Promise.allSettled(
-        servers.map(async (s, idx) => {
-            const isUserServer = idx < userServers.length;
-            s.pingTime = Date.now();
-            return ping.promise
-                .probe(s.host, { timeout: 10 })
-                .then((result) => {
-                    if (result.alive) {
-                        s.ping = Math.ceil(+result.avg);
-                        s.pingFailedTimes = 0;
-                    } else {
-                        s.ping = -1;
-                        s.pingFailedTimes++;
-                        if (
-                            !isUserServer &&
-                            s.pingFailedTimes >= 3 &&
-                            s.conn < 0
-                        ) {
-                            serversWillRemoved.push(s.id);
-                        }
-                    }
-                    pinglog.info(`${s.ping}ms ${s.host}`);
-                })
-                .catch((e) => {
-                    pinglog.info(
-                        `Fail to ping. server: ${s.id}. ${e.toString()}`
-                    );
-                });
-        })
-    );
-    if (serversWillRemoved.length > 0) {
-        delSubServers(...serversWillRemoved);
-    }
-    await saveConfig();
-}
-
-let pingTimer: NodeJS.Timer | null = null;
-
-export function startPingTimer() {
-    if (pingTimer !== null) {
-        throw new Error('Ping timer is already started');
-    }
-    pingTimer = setInterval(() => {
-        try {
-            pingServers();
-        } catch (e) {
-            logger.error(`Fail to ping. ${e.toString()}`);
-        }
-    }, getConfig('ping.interval') * 1000);
-}
-
-export function stopPingTimer() {
-    if (pingTimer !== null) {
-        clearInterval(pingTimer);
-        pingTimer = null;
-    }
-}
-
 export function addUserConfig(url: string): string | undefined {
     const { userServers, subServers } = getAllServers();
     if ([...userServers, ...subServers].some((item) => item.url === url)) {
@@ -210,9 +129,6 @@ export function addUserConfig(url: string): string | undefined {
         host: cfg.host,
         url,
         cfg: JSON.stringify(cfg),
-        ping: -1,
-        pingFailedTimes: 0,
-        pingTime: 0,
         conn: -1,
         connTime: 0,
     });
@@ -296,10 +212,6 @@ export async function checkConnection(print2console = false) {
     });
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
-        if (server.ping < 0) {
-            server.conn = -1;
-            continue;
-        }
         cclog.info(`Checking [${server.name}] ${server.host}`);
         try {
             await v2test.changeOutbound(JSON.parse(server.cfg));
@@ -347,7 +259,7 @@ export async function clearNotConnectedServers(): Promise<number> {
         const ss = list[i];
         for (let j = 0; j < ss.length; j++) {
             const server = ss[j];
-            if (server.conn < 0) {
+            if (server.connTime > 0 && server.conn < 0) {
                 ss.splice(j, 1);
                 j--;
                 n++;
