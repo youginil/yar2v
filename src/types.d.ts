@@ -6,6 +6,7 @@ interface Server {
     cfg: string;
     conn: number;
     connTime: number;
+    connFails: number;
 }
 
 interface Configuration {
@@ -27,6 +28,7 @@ interface Configuration {
     'test.api.port': number;
     'sub.interval': number;
     'conn.interval': number;
+    'conn.timeout': number;
     'v2ray.log.level': 'debug' | 'info' | 'warning' | 'error' | 'none';
     'log.level': string;
 }

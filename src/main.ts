@@ -14,7 +14,7 @@ import {
 } from './config';
 import {
     checkConnection,
-    clearNotConnectedServers,
+    clearFailedServers,
     importConfig,
     runningStatus,
     selectServer,
@@ -90,8 +90,8 @@ async function selectAction() {
                     value: 'clear-sub-servers',
                 },
                 {
-                    name: 'Clear Not-Connected Servers',
-                    value: 'clear-not-connected',
+                    name: 'Clear Failed Servers',
+                    value: 'clear-failed',
                 },
             ],
             pageSize: 20,
@@ -148,8 +148,8 @@ async function selectAction() {
         case 'clear-user-servers':
             await setConfig('servers.user', []);
             break;
-        case 'clear-not-connected':
-            const n = await clearNotConnectedServers();
+        case 'clear-failed':
+            const n = await clearFailedServers();
             console.log(`${n} server(s) removed`);
             break;
         default:
@@ -177,6 +177,10 @@ async function chooseServer() {
         (r, item) => Math.max(r, item.conn.toString().length),
         0
     );
+    const len3 = servers.reduce(
+        (r, item) => Math.max(r, item.connFails.toString().length),
+        0
+    );
     const choices: { name: string; value: string }[] = servers
         .sort(compareServer)
         .map((server, idx) => ({
@@ -184,7 +188,8 @@ async function chooseServer() {
                 ' '.repeat(len1 - (idx + 1).toString().length),
                 curID === server.id ? '@' : ' ',
                 usids.includes(server.id) ? 'U' : 'S',
-                server.conn.toString().padStart(len2 + 1, ' ') + 'ms',
+                server.conn.toString().padStart(len2, ' ') + 'ms',
+                server.connFails.toString().padStart(len3, ' '),
                 ts2str(server.connTime),
                 server.name,
             ].join(' '),

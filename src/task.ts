@@ -31,6 +31,7 @@ export async function importConfig(url: string) {
         cfg: JSON.stringify(cfg),
         conn: -1,
         connTime: 0,
+        connFails: 0,
     });
     await saveConfig();
 }
@@ -79,6 +80,7 @@ export async function updateSubServers(print2console = false) {
                                 cfg: JSON.stringify(cfg),
                                 conn: -1,
                                 connTime: 0,
+                                connFails: 0,
                             });
                             uplog.info(`${item}`);
                         }
@@ -131,6 +133,7 @@ export function addUserConfig(url: string): string | undefined {
         cfg: JSON.stringify(cfg),
         conn: -1,
         connTime: 0,
+        connFails: 0,
     });
 }
 
@@ -203,7 +206,7 @@ export async function checkConnection(print2console = false) {
     const testUrl = 'https://www.google.com/generate_204';
     const request = axios.create({
         httpsAgent: createHttpsAgent(`http://${proxyHost}:${proxyPort}`),
-        timeout: 10 * 1000,
+        timeout: getConfig('conn.timeout') * 1000,
         proxy: false,
         headers: {
             'User-Agent':
@@ -219,12 +222,15 @@ export async function checkConnection(print2console = false) {
             const res = await request.head(testUrl);
             const dt = Date.now() - st;
             server.conn = dt;
-            server.connTime = st;
+            server.connFails = 0;
             moveSub2User(server.id);
             cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
         } catch (e) {
             server.conn = -1;
+            server.connFails++;
             cclog.info(e.toString());
+        } finally {
+            server.connTime = Date.now();
         }
     }
     await saveConfig();
@@ -251,7 +257,7 @@ export function stopCheckTimer() {
     }
 }
 
-export async function clearNotConnectedServers(): Promise<number> {
+export async function clearFailedServers(): Promise<number> {
     const { userServers, subServers } = getAllServers();
     const list = [userServers, subServers];
     let n = 0;
@@ -259,7 +265,7 @@ export async function clearNotConnectedServers(): Promise<number> {
         const ss = list[i];
         for (let j = 0; j < ss.length; j++) {
             const server = ss[j];
-            if (server.connTime > 0 && server.conn < 0) {
+            if (server.connFails > 3) {
                 ss.splice(j, 1);
                 j--;
                 n++;

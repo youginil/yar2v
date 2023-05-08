@@ -29,8 +29,21 @@ const Server: JSONSchemaType<Server> = {
             type: 'number',
             default: 0,
         },
+        connFails: {
+            type: 'number',
+            default: 0,
+        },
     },
-    required: ['id', 'name', 'host', 'url', 'cfg', 'conn', 'connTime'],
+    required: [
+        'id',
+        'name',
+        'host',
+        'url',
+        'cfg',
+        'conn',
+        'connTime',
+        'connFails',
+    ],
 };
 
 const schema: JSONSchemaType<Configuration> = {
@@ -112,6 +125,10 @@ const schema: JSONSchemaType<Configuration> = {
         'conn.interval': {
             type: 'number',
             default: 10 * 60,
+        },
+        'conn.timeout': {
+            type: 'number',
+            default: 10,
         },
         'v2ray.log.level': {
             type: 'string',
