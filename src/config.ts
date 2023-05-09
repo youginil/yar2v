@@ -27,11 +27,9 @@ const Server: JSONSchemaType<Server> = {
         },
         connTime: {
             type: 'number',
-            default: 0,
         },
         connFails: {
             type: 'number',
-            default: 0,
         },
     },
     required: [
@@ -94,22 +92,6 @@ const schema: JSONSchemaType<Configuration> = {
             type: 'number',
             default: 1100,
         },
-        'test.http.host': {
-            type: 'string',
-            default: '127.0.0.1',
-        },
-        'test.http.port': {
-            type: 'number',
-            default: 2080,
-        },
-        'test.sock.host': {
-            type: 'string',
-            default: '127.0.0.1',
-        },
-        'test.sock.port': {
-            type: 'number',
-            default: 2090,
-        },
         'test.api.host': {
             type: 'string',
             default: '127.0.0.1',
@@ -150,10 +132,6 @@ const schema: JSONSchemaType<Configuration> = {
         'main.sock.port',
         'main.api.host',
         'main.api.port',
-        'test.http.host',
-        'test.http.port',
-        'test.sock.host',
-        'test.sock.port',
         'test.api.host',
         'test.api.port',
         'sub.interval',
@@ -246,39 +224,5 @@ export function delSubServers(...ids: string[]) {
             }
         }
     });
-}
-
-export async function moveSub2User(id: string) {
-    const userServers = config['servers.user'];
-    const subServers = config['servers.sub'];
-    for (let i = 0; i < userServers.length; i++) {
-        if (userServers[i].id === id) {
-            return;
-        }
-    }
-    for (let i = 0; i < subServers.length; i++) {
-        if (subServers[i].id === id) {
-            const [server] = subServers.splice(i, 1);
-            userServers.push(server);
-            await saveConfig();
-        }
-    }
-}
-
-export async function moveUser2Sub(id: string) {
-    const userServers = config['servers.user'];
-    const subServers = config['servers.sub'];
-    for (let i = 0; i < subServers.length; i++) {
-        if (subServers[i].id === id) {
-            return;
-        }
-    }
-    for (let i = 0; i < userServers.length; i++) {
-        if (userServers[i].id === id) {
-            const [server] = userServers.splice(i, 1);
-            subServers.push(server);
-            await saveConfig();
-        }
-    }
 }
 

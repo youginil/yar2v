@@ -20,10 +20,6 @@ interface Configuration {
     'main.sock.port': number;
     'main.api.host': string;
     'main.api.port': number;
-    'test.http.host': string;
-    'test.http.port': number;
-    'test.sock.host': string;
-    'test.sock.port': number;
     'test.api.host': string;
     'test.api.port': number;
     'sub.interval': number;
@@ -285,6 +281,23 @@ type Outbound = Partial<{
     };
 }>;
 
+type Rule = Partial<{
+    domainMatcher: 'linear' | 'mph';
+    type: 'field';
+    domains: string[];
+    ip: string[];
+    port: number | string;
+    sourcePort: number | string;
+    network: 'tcp' | 'udp' | 'tcp,udp';
+    source: string[];
+    user: string[];
+    inboundTag: string[];
+    protocol: ('http' | 'tls' | 'bittorrent')[];
+    attrs: string;
+    outboundTag: string;
+    balancerTag: string;
+}>;
+
 interface V2rayConfig {
     name: string;
     host: string;
@@ -301,22 +314,7 @@ interface V2rayConfig {
     routing?: Partial<{
         domainStrategy: 'AsIs';
         domainMatcher: 'mph';
-        rules: Partial<{
-            domainMatcher: 'linear' | 'mph';
-            type: 'field';
-            domains: string[];
-            ip: string[];
-            port: number | string;
-            sourcePort: number | string;
-            network: 'tcp' | 'udp' | 'tcp,udp';
-            source: string[];
-            user: string[];
-            inboundTag: string[];
-            protocol: ('http' | 'tls' | 'bittorrent')[];
-            attrs: string;
-            outboundTag: string;
-            balancerTag: string;
-        }>[];
+        rules: Rule[];
         balancers: {
             tag: string;
             selector: string[];

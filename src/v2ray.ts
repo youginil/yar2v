@@ -3,15 +3,17 @@ import logger from './logger';
 import { exec, ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import { DataDir } from './constants';
+import {
+    DataDir,
+    HttpInboundTag,
+    MaxTesting,
+    OutboundTag,
+    SockInboundTag,
+} from './constants';
 import path from 'path';
 import { getConfig } from './config';
 
 type Parser = (url: string) => { name: string; host: string; ob: Outbound };
-
-const HttpInboundTag = 'user-http';
-const SockInboundTag = 'user-socks';
-const OutboundTag = 'remote';
 
 const parseVmess: Parser = (url: string) => {
     const json = Buffer.from(url.slice(8), 'base64').toString();
@@ -199,30 +201,20 @@ const v2ray = path.join(DataDir, 'v2ray');
 export class V2ray {
     private name: string;
     private cfgfile: string;
-    private httpProxy: [string, number];
-    private sockProxy: [string, number];
     private apiProxy: [string, number];
     private serverParam: string;
     private logger: winston.Logger;
     private proc: ChildProcessWithoutNullStreams | null = null;
 
-    constructor(
-        name: string,
-        cfgfile: string,
-        httpProxy: [string, number],
-        sockProxy: [string, number],
-        apiProxy: [string, number]
-    ) {
+    constructor(name: string, cfgfile: string, apiProxy: [string, number]) {
         this.name = name;
         this.cfgfile = cfgfile;
-        this.httpProxy = httpProxy;
-        this.sockProxy = sockProxy;
         this.apiProxy = apiProxy;
         this.serverParam = '-s ' + this.apiProxy[0] + ':' + this.apiProxy[1];
         this.logger = logger.child({ module: 'v2ray-' + name });
     }
 
-    async run() {
+    async run(inbounds: Inbound[], outbounds: Outbound[]) {
         this.logger.info('Start v2ray ' + this.name);
         if (this.proc) {
             this.logger.warning('V2ray already started');
@@ -247,32 +239,33 @@ export class V2ray {
                     settings: { address: this.apiProxy[0] },
                     tag: 'api',
                 },
-                {
-                    protocol: 'http',
-                    listen: this.httpProxy[0],
-                    port: this.httpProxy[1],
-                    tag: HttpInboundTag,
-                },
-                {
-                    protocol: 'socks',
-                    listen: this.sockProxy[0],
-                    port: this.sockProxy[1],
-                    tag: SockInboundTag,
-                },
+                ...inbounds,
             ],
-            outbounds: [],
+            outbounds,
             api: {
                 tag: 'api',
                 services: ['HandlerService', 'LoggerService', 'StatsService'],
             },
             routing: {
                 rules: [
-                    { inboundTag: ['api'], outboundTag: 'api', type: 'field' },
+                    {
+                        inboundTag: ['api'],
+                        outboundTag: 'api',
+                        type: 'field',
+                    },
                     {
                         inboundTag: [HttpInboundTag, SockInboundTag],
                         outboundTag: OutboundTag,
                         type: 'field',
                     },
+                    ...Array(MaxTesting).fill(0).map((_, i) => {
+                        const tag = 'test-' + i;
+                        return <Rule>{
+                            inboundTag: [tag],
+                            outboundTag: tag,
+                            type: 'field',
+                        };
+                    }),
                 ],
             },
         };
@@ -290,7 +283,6 @@ export class V2ray {
         });
 
         this.proc.on('exit', (code) => {
-            this.logger.info(`v2ray ${this.name} exits`);
             this.proc = null;
             if (code === 0) {
                 this.logger.info('Exit normally');
@@ -330,33 +322,88 @@ export class V2ray {
             .stdout;
     }
 
-    private async addOutbound(cfg: V2rayConfig) {
-        await fs.writeFile(this.cfgfile, JSON.stringify(cfg));
-        const { stdout } = await this.exec(
+    async addInbound(inbound: Inbound, file?: string) {
+        if (!file) {
+            file = this.cfgfile;
+        }
+        const cfg: Omit<V2rayConfig, 'name' | 'host'> = {
+            inbounds: [inbound],
+            outbounds: [],
+        };
+        await fs.writeFile(file, JSON.stringify(cfg));
+        const { stdout, stderr } = await this.exec(
             'api',
-            'ado',
+            'adi',
             this.serverParam,
-            this.cfgfile
+            file
         );
-        this.logger.info(stdout);
-    }
-
-    private async delOutbound(...tags: string[]) {
-        if (tags.length > 0) {
-            const { stdout } = await this.exec(
-                'api',
-                'rmo',
-                this.serverParam,
-                '-tags',
-                tags.join(' ')
-            );
+        if (stdout) {
             this.logger.info(stdout);
+        }
+        if (stderr) {
+            this.logger.error(stderr);
+            throw new Error(stderr);
         }
     }
 
-    async changeOutbound(cfg: V2rayConfig) {
-        await this.delOutbound(OutboundTag);
-        await this.addOutbound(cfg);
+    async rmInbound(...tags: string[]) {
+        if (tags.length === 0) {
+            return;
+        }
+        const { stdout, stderr } = await this.exec(
+            'api',
+            'rmi',
+            this.serverParam,
+            '--tags',
+            tags.join(' ')
+        );
+        if (stdout) {
+            this.logger.info(stdout);
+        }
+        if (stderr) {
+            this.logger.error(stderr);
+            throw new Error(stderr);
+        }
+    }
+
+    async addOutbound(cfg: V2rayConfig, file?: string) {
+        if (!file) {
+            file = this.cfgfile;
+        }
+        await fs.writeFile(file, JSON.stringify(cfg));
+        const { stdout, stderr } = await this.exec(
+            'api',
+            'ado',
+            this.serverParam,
+            file
+        );
+        if (stdout) {
+            this.logger.info(stdout);
+        }
+        if (stderr) {
+            this.logger.error(stderr);
+            throw new Error(stderr);
+        }
+    }
+
+    async rmOutbound(...tags: string[]) {
+        if (tags.length === 0) {
+            return;
+        }
+        const { stdout, stderr } = await this.exec(
+            'api',
+            'rmo',
+            this.serverParam,
+            '-tags',
+            tags.join(' ')
+        );
+        if (stdout) {
+            this.logger.info(stdout);
+        }
+        if (stderr) {
+            this.logger.error(stderr);
+            throw new Error(stderr);
+        }
     }
 }
 

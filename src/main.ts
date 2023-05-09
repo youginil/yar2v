@@ -6,21 +6,17 @@ import {
     getAllServers,
     getConfig,
     getServer,
-    isUserServer,
     loadConfig,
-    moveSub2User,
-    moveUser2Sub,
     setConfig,
 } from './config';
 import {
     checkConnection,
     importConfig,
+    rmFailedServers,
     runningStatus,
     selectServer,
-    startCheckTimer,
     startSubTimer,
     startV2ray,
-    stopCheckTimer,
     stopSubTimer,
     stopV2ray,
     updateSubServers,
@@ -88,6 +84,10 @@ async function selectAction() {
                     name: 'Clear Sub Servers',
                     value: 'clear-sub-servers',
                 },
+                {
+                    name: 'Remove Failed Servers',
+                    value: 'rm-failed',
+                },
             ],
             pageSize: 20,
         },
@@ -122,10 +122,9 @@ async function selectAction() {
             stopSubTimer();
             await tryRun(async () => await updateSubServers(true));
             startSubTimer();
+            break;
         case 'connection':
-            stopCheckTimer();
             await tryRun(async () => await checkConnection(true), false);
-            startCheckTimer();
             await chooseServer();
             break;
         case 'proxy':
@@ -142,6 +141,14 @@ async function selectAction() {
             break;
         case 'clear-user-servers':
             await setConfig('servers.user', []);
+            break;
+        case 'rm-failed':
+            await tryRun(async () => {
+                const n = await rmFailedServers();
+                if (n > 0) {
+                    console.log('${n} failed servers removed');
+                }
+            });
             break;
         default:
             console.error(`Invalid Action: ${answers.action}`);
@@ -200,48 +207,11 @@ async function chooseServer() {
     if (answers.server) {
         const server = getServer(answers.server);
         if (server) {
-            const isus = isUserServer(server.id);
-            const answers = await inquirer.prompt([
-                {
-                    name: 'action',
-                    message: `What to do with [${server.name}]?`,
-                    type: 'rawlist',
-                    choices: [
-                        {
-                            name: 'Back',
-                            value: '',
-                        },
-                        {
-                            name: 'Active',
-                            value: 'active',
-                        },
-                        {
-                            name: isus
-                                ? 'Move to Subscribe Servers'
-                                : 'Move to User Servers',
-                            value: isus ? 'u2s' : 's2u',
-                        },
-                    ],
-                },
-            ]);
-            switch (answers.action) {
-                case 'active':
-                    await tryRun(async () => await selectServer(server.id));
-                    break;
-                case 'u2s':
-                    await tryRun(async () => await moveUser2Sub(server.id));
-                    break;
-                case 's2u':
-                    await tryRun(async () => await moveSub2User(server.id));
-                    break;
-                default:
-                    break;
-            }
-            await chooseServer();
+            await tryRun(async () => await selectServer(answers.server));
         } else {
             console.warn(`Invalid Server`);
         }
-        await tryRun(async () => await selectServer(answers.server));
+        await chooseServer();
     }
 }
 
@@ -253,7 +223,6 @@ async function chooseServer() {
     setLoggerLevel(getConfig('log.level'));
     await startV2ray();
     startSubTimer();
-    startCheckTimer();
 
     const sid = getConfig('server');
     if (sid) {

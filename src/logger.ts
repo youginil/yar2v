@@ -11,7 +11,7 @@ const logger = createLogger({
     transports: [
         new DailyRotateFile({
             dirname: DataDir,
-            filename: 'yar2v.log',
+            filename: 'log',
         }),
     ],
 });

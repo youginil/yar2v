@@ -4,14 +4,19 @@ import {
     getAllServers,
     getConfig,
     getServer,
-    moveSub2User,
     saveConfig,
     setConfig,
 } from './config';
 import { V2ray, parseURL } from './v2ray';
 import logger, { cslogger } from './logger';
 import path from 'path';
-import { DataDir } from './constants';
+import {
+    DataDir,
+    HttpInboundTag,
+    MaxTesting,
+    OutboundTag,
+    SockInboundTag,
+} from './constants';
 
 function generateServerID() {
     return Date.now() + '-' + Math.random();
@@ -144,23 +149,39 @@ const v2testCfgfile = path.join(DataDir, 'v2ray.test.json');
 let v2test: V2ray;
 
 export async function startV2ray() {
-    v2main = new V2ray(
-        'main',
-        v2mainCfgfile,
-        [getConfig('main.http.host'), getConfig('main.http.port')],
-        [getConfig('main.sock.host'), getConfig('main.sock.port')],
-        [getConfig('main.api.host'), getConfig('main.api.port')]
+    const server = getServer();
+    const outbounds: Outbound[] = [];
+    if (server) {
+        const cfg: V2rayConfig = JSON.parse(server.cfg);
+        outbounds.push(...cfg.outbounds);
+    }
+    v2main = new V2ray('main', v2mainCfgfile, [
+        getConfig('main.api.host'),
+        getConfig('main.api.port'),
+    ]);
+    await v2main.run(
+        [
+            {
+                protocol: 'http',
+                listen: getConfig('main.http.host'),
+                port: getConfig('main.http.port'),
+                tag: HttpInboundTag,
+            },
+            {
+                protocol: 'socks',
+                listen: getConfig('main.sock.host'),
+                port: getConfig('main.sock.port'),
+                tag: SockInboundTag,
+            },
+        ],
+        outbounds
     );
-    await v2main.run();
 
-    v2test = new V2ray(
-        'test',
-        v2testCfgfile,
-        [getConfig('test.http.host'), getConfig('test.http.port')],
-        [getConfig('test.sock.host'), getConfig('test.sock.port')],
-        [getConfig('test.api.host'), getConfig('test.api.port')]
-    );
-    await v2test.run();
+    v2test = new V2ray('test', v2testCfgfile, [
+        getConfig('test.api.host'),
+        getConfig('test.api.port'),
+    ]);
+    await v2test.run([], []);
 }
 
 export function stopV2ray() {
@@ -181,7 +202,8 @@ export async function selectServer(id: string) {
         for (let j = 0; j < servers.length; j++) {
             const server = servers[j];
             if (server.id === id) {
-                await v2main.changeOutbound(JSON.parse(server.cfg));
+                await v2main.rmOutbound(OutboundTag);
+                await v2main.addOutbound(JSON.parse(server.cfg));
                 await setConfig('server', id);
                 return;
             }
@@ -190,81 +212,110 @@ export async function selectServer(id: string) {
 }
 
 let isCheckingConnection = false;
-export async function checkConnection(print2console = false) {
+export function checkConnection(print2console = false): Promise<void> {
     const cclog = (print2console ? cslogger : logger).child({
         module: 'Connection',
     });
-    cclog.info(`Check connection`);
     if (isCheckingConnection) {
         cclog.warn('The connection checking is in progress');
-        return;
+        return Promise.resolve();
     }
-    const { userServers, subServers } = getAllServers();
-    const proxyHost = getConfig('test.http.host');
-    const proxyPort = getConfig('test.http.port');
-    const servers = [...userServers, ...subServers];
-    const testUrl = 'https://www.google.com/';
-    const request = axios.create({
-        httpsAgent: new HttpsProxyAgent(`http://${proxyHost}:${proxyPort}`),
-        timeout: getConfig('conn.timeout') * 1000,
-        proxy: false,
-        headers: {
-            'User-Agent':
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
-        },
-    });
-    for (let i = 0; i < servers.length; i++) {
-        const server = servers[i];
-        cclog.info(`Checking [${server.name}] ${server.host}`);
-        try {
-            await v2test.changeOutbound(JSON.parse(server.cfg));
-            const st = Date.now();
-            const res = await request.head(testUrl);
-            const dt = Date.now() - st;
-            server.conn = dt;
-            server.connFails = 0;
-            moveSub2User(server.id);
-            cclog.info(`${res.status} ${res.statusText} ${dt}ms`);
-        } catch (e) {
-            server.conn = -1;
-            server.connFails++;
-            cclog.info(e.toString());
-        } finally {
-            server.connTime = Date.now();
+
+    return new Promise((resolve) => {
+        const { userServers, subServers } = getAllServers();
+        const servers = [...userServers, ...subServers];
+
+        let testingNum = 0;
+        let index = -1;
+        let port = 10000;
+
+        async function testConnection(server: Server, tag: string) {
+            testingNum++;
+            cclog.info(`Checking [${server.name}] ${server.host}`);
+            const h = '127.0.0.1';
+            let p = ++port;
+            try {
+                const cfg: V2rayConfig = JSON.parse(server.cfg);
+                cfg.outbounds[0].tag = tag;
+                const cfgfile = path.join(DataDir, tag + '.json');
+                await v2test.addOutbound(cfg, cfgfile);
+                while (true) {
+                    try {
+                        await v2test.addInbound(
+                            {
+                                protocol: 'http',
+                                listen: h,
+                                port: p,
+                                tag: tag,
+                            },
+                            cfgfile
+                        );
+                        break;
+                    } catch (e) {
+                        // todo check if busy port
+                        p = ++port;
+                    }
+                }
+                const request = axios.create({
+                    httpsAgent: new HttpsProxyAgent(`http://${h}:${p}`),
+                    timeout: getConfig('conn.timeout') * 1000,
+                    proxy: false,
+                    headers: {
+                        'User-Agent':
+                            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+                    },
+                });
+                const st = Date.now();
+                await request.head('https://www.google.com/');
+                const dt = Date.now() - st;
+                server.conn = dt;
+                server.connFails = 0;
+            } catch (e) {
+                server.conn = -1;
+                server.connFails++;
+            } finally {
+                server.connTime = Date.now();
+                testingNum--;
+                await v2test.rmOutbound(tag);
+                await v2test.rmInbound(tag);
+            }
+            if (index === servers.length - 1) {
+                if (testingNum === 0) {
+                    isCheckingConnection = false;
+                    await saveConfig();
+                    resolve();
+                }
+                return;
+            }
+            index += 1;
+            testConnection(servers[index], tag);
         }
-    }
+
+        for (let i = 0; i < Math.min(MaxTesting, servers.length); i++) {
+            const server = servers[i];
+            testConnection(server, 'test-' + i);
+        }
+    });
+}
+
+export async function rmFailedServers(): Promise<number> {
+    const { userServers, subServers } = getAllServers();
     const list = [userServers, subServers];
+    let num = 0;
     for (let i = 0; i < list.length; i++) {
         const ss = list[i];
         for (let j = 0; j < ss.length; j++) {
             const server = ss[j];
-            if (server.connFails > 3) {
+            if (server.connFails >= 3) {
                 ss.splice(j, 1);
                 j--;
+                num++;
             }
         }
     }
-    await saveConfig();
-}
-
-let checkTimer: NodeJS.Timer | null = null;
-export function startCheckTimer() {
-    if (checkTimer !== null) {
-        throw new Error('Check timer is already started');
+    if (num > 0) {
+        await saveConfig();
     }
-    checkTimer = setInterval(() => {
-        try {
-            checkConnection();
-        } catch (_) {
-            //
-        }
-    }, getConfig('conn.interval') * 1000);
-}
-
-export function stopCheckTimer() {
-    if (checkTimer !== null) {
-        clearInterval(checkTimer);
-        checkTimer = null;
-    }
+    return num;
 }
 
