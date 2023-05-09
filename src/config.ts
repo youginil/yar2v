@@ -104,10 +104,6 @@ const schema: JSONSchemaType<Configuration> = {
             type: 'number',
             default: 1800,
         },
-        'conn.interval': {
-            type: 'number',
-            default: 10 * 60,
-        },
         'conn.timeout': {
             type: 'number',
             default: 10,
@@ -135,7 +131,6 @@ const schema: JSONSchemaType<Configuration> = {
         'test.api.host',
         'test.api.port',
         'sub.interval',
-        'conn.interval',
         'v2ray.log.level',
         'log.level',
     ],

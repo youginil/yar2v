@@ -23,7 +23,6 @@ interface Configuration {
     'test.api.host': string;
     'test.api.port': number;
     'sub.interval': number;
-    'conn.interval': number;
     'conn.timeout': number;
     'v2ray.log.level': 'debug' | 'info' | 'warning' | 'error' | 'none';
     'log.level': string;
