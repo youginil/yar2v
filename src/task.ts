@@ -292,6 +292,7 @@ export function checkConnection(print2console = false): Promise<void> {
         }
 
         for (let i = 0; i < Math.min(MaxTesting, servers.length); i++) {
+            index = i;
             const server = servers[i];
             testConnection(server, 'test-' + i);
         }
