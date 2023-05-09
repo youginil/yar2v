@@ -252,6 +252,7 @@ export function checkConnection(print2console = false): Promise<void> {
                         );
                         break;
                     } catch (e) {
+                        cclog.error(e.toString());
                         // todo check if busy port
                         p = ++port;
                     }
