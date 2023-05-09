@@ -16,6 +16,7 @@ import {
     MaxTesting,
     OutboundTag,
     SockInboundTag,
+    TestingTagPrefix,
 } from './constants';
 
 function generateServerID() {
@@ -174,14 +175,28 @@ export async function startV2ray() {
                 tag: SockInboundTag,
             },
         ],
-        outbounds
+        outbounds,
+        []
     );
 
     v2test = new V2ray('test', v2testCfgfile, [
         getConfig('test.api.host'),
         getConfig('test.api.port'),
     ]);
-    await v2test.run([], []);
+    await v2test.run(
+        [],
+        [],
+        Array(MaxTesting)
+            .fill(0)
+            .map((_, i) => {
+                const tag = TestingTagPrefix + i;
+                return <Rule>{
+                    inboundTag: [tag],
+                    outboundTag: tag,
+                    type: 'field',
+                };
+            })
+    );
 }
 
 export function stopV2ray() {
@@ -295,7 +310,7 @@ export function checkConnection(print2console = false): Promise<void> {
         for (let i = 0; i < Math.min(MaxTesting, servers.length); i++) {
             index = i;
             const server = servers[i];
-            testConnection(server, 'test-' + i);
+            testConnection(server, TestingTagPrefix + i);
         }
     });
 }

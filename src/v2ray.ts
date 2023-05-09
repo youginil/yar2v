@@ -214,7 +214,7 @@ export class V2ray {
         this.logger = logger.child({ module: 'v2ray-' + name });
     }
 
-    async run(inbounds: Inbound[], outbounds: Outbound[]) {
+    async run(inbounds: Inbound[], outbounds: Outbound[], rules: Rule[]) {
         this.logger.info('Start v2ray ' + this.name);
         if (this.proc) {
             this.logger.warning('V2ray already started');
@@ -258,14 +258,7 @@ export class V2ray {
                         outboundTag: OutboundTag,
                         type: 'field',
                     },
-                    ...Array(MaxTesting).fill(0).map((_, i) => {
-                        const tag = 'test-' + i;
-                        return <Rule>{
-                            inboundTag: [tag],
-                            outboundTag: tag,
-                            type: 'field',
-                        };
-                    }),
+                    ...rules,
                 ],
             },
         };
