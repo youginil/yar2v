@@ -200,7 +200,7 @@ async function chooseServer() {
             message: 'Choose server',
             type: 'rawlist',
             choices,
-            pageSize: 20,
+            pageSize: 30,
             default: '',
         },
     ]);
