@@ -170,27 +170,36 @@ async function chooseServer() {
     const { userServers, subServers } = getAllServers();
     const usids = userServers.map((item) => item.id);
     const servers = [...userServers, ...subServers];
-    const len1 = servers.length.toString().length;
-    const len2 = servers.reduce(
-        (r, item) => Math.max(r, item.conn.toString().length),
-        0
-    );
-    const len3 = servers.reduce(
-        (r, item) => Math.max(r, item.connFails.toString().length),
-        0
-    );
+    const protocols: string[] = [];
+    const indexMaxLen = servers.length.toString().length;
+    let connMaxLen = 0;
+    let connFailsMaxLen = 0;
+    let protocolMaxLen = 0;
+    for (let i = 0; i < servers.length; i++) {
+        const server = servers[i];
+        connMaxLen = Math.max(connMaxLen, server.conn.toString().length);
+        connFailsMaxLen = Math.max(
+            connFailsMaxLen,
+            server.connFails.toString().length
+        );
+        const m = server.url.match(/^([^:]+):\/\//);
+        const protocol = m ? m[1] : '';
+        protocols.push(protocol);
+        protocolMaxLen = Math.max(protocolMaxLen, protocol.length);
+    }
     const choices: { name: string; value: string }[] = servers
         .sort(compareServer)
         .map((server, idx) => ({
             name: [
-                ' '.repeat(len1 - (idx + 1).toString().length),
+                ' '.repeat(indexMaxLen - (idx + 1).toString().length),
                 curID === server.id ? '@' : ' ',
                 usids.includes(server.id) ? 'U' : 'S',
-                server.conn.toString().padStart(len2, ' ') + 'ms',
-                server.connFails.toString().padStart(len3, ' '),
+                server.conn.toString().padStart(connMaxLen, ' ') + 'ms',
                 ts2str(server.connTime),
+                server.connFails.toString().padStart(connFailsMaxLen, ' '),
+                protocols[idx].padStart(protocolMaxLen, ' '),
                 server.name,
-            ].join(' '),
+            ].join('  '),
             value: server.id,
         }));
     choices.push({ name: 'Back', value: '' });

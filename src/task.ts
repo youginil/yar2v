@@ -8,7 +8,7 @@ import {
     setConfig,
 } from './config';
 import { V2ray, parseURL } from './v2ray';
-import logger, { cslogger } from './logger';
+import logger, { cslogger, todologger } from './logger';
 import path from 'path';
 import {
     DataDir,
@@ -268,7 +268,10 @@ export function checkConnection(print2console = false): Promise<void> {
                         break;
                     } catch (e) {
                         cclog.error(e.toString());
-                        // todo check if busy port
+                        todologger.info({
+                            message: 'check busy port',
+                            err: e.toString(),
+                        });
                         p = ++port;
                     }
                 }

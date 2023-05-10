@@ -1,12 +1,11 @@
 import winston from 'winston';
-import logger from './logger';
+import logger, { todologger } from './logger';
 import { exec, ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import {
     DataDir,
     HttpInboundTag,
-    MaxTesting,
     OutboundTag,
     SockInboundTag,
 } from './constants';
@@ -25,7 +24,7 @@ const parseVmess: Parser = (url: string) => {
         name = data.add;
     }
     if (data.tls === 'xtls') {
-        logger.error(`TODO xtls: ${url}`);
+        todologger.info({ XTLS: url });
     }
     const ob: Outbound = {
         protocol: 'vmess',
@@ -193,7 +192,7 @@ export function parseURL(url: string): V2rayConfig | undefined {
             return cfg;
         }
     }
-    logger.error(`Invalid url: ${url}`);
+    todologger.warn(`Unknown URL: ${url}`);
 }
 
 const v2ray = path.join(DataDir, 'v2ray');

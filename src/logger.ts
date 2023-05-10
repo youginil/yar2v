@@ -32,6 +32,15 @@ export const cslogger = createLogger({
     transports: [new transports.Console()],
 });
 
+export const todologger = createLogger({
+    level: 'info',
+    format: format.combine(
+        format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        format.json()
+    ),
+    transports: [new transports.File({ filename: 'todo', dirname: DataDir })],
+});
+
 export function setLoggerLevel(level: string) {
     logger.level = level;
     cslogger.level = level;
