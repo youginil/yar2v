@@ -231,6 +231,7 @@ export function checkConnection(print2console = false): Promise<void> {
     const cclog = (print2console ? cslogger : logger).child({
         module: 'Connection',
     });
+    cclog.info('Check connection');
     if (isCheckingConnection) {
         cclog.warn('The connection checking is in progress');
         return Promise.resolve();
@@ -301,6 +302,7 @@ export function checkConnection(print2console = false): Promise<void> {
             if (index === servers.length - 1) {
                 if (testingNum === 0) {
                     isCheckingConnection = false;
+                    await rmFailedServers(false);
                     await saveConfig();
                     resolve();
                 }
@@ -340,7 +342,7 @@ export function stopCheckTimer() {
     }
 }
 
-export async function rmFailedServers(): Promise<number> {
+export async function rmFailedServers(save = true): Promise<number> {
     const { userServers, subServers } = getAllServers();
     const list = [userServers, subServers];
     let num = 0;
@@ -355,7 +357,7 @@ export async function rmFailedServers(): Promise<number> {
             }
         }
     }
-    if (num > 0) {
+    if (save && num > 0) {
         await saveConfig();
     }
     return num;
