@@ -15,6 +15,7 @@ import {
     rmFailedServers,
     runningStatus,
     selectServer,
+    startCheckTimer,
     startSubTimer,
     startV2ray,
     stopSubTimer,
@@ -232,6 +233,7 @@ async function chooseServer() {
     setLoggerLevel(getConfig('log.level'));
     await startV2ray();
     startSubTimer();
+    startCheckTimer();
 
     const sid = getConfig('server');
     if (sid) {

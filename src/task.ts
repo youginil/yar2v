@@ -318,6 +318,28 @@ export function checkConnection(print2console = false): Promise<void> {
     });
 }
 
+let checkTimer: NodeJS.Timer | null = null;
+export function startCheckTimer() {
+    if (checkTimer !== null) {
+        clearTimeout(checkTimer);
+    }
+    checkTimer = setTimeout(async () => {
+        checkTimer = null;
+        try {
+            await checkConnection();
+        } finally {
+            startCheckTimer();
+        }
+    }, getConfig('conn.interval') * 1000);
+}
+
+export function stopCheckTimer() {
+    if (checkTimer !== null) {
+        clearTimeout(checkTimer);
+        checkTimer = null;
+    }
+}
+
 export async function rmFailedServers(): Promise<number> {
     const { userServers, subServers } = getAllServers();
     const list = [userServers, subServers];

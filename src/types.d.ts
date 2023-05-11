@@ -24,6 +24,7 @@ interface Configuration {
     'test.api.port': number;
     'sub.interval': number;
     'conn.timeout': number;
+    'conn.interval': number;
     'v2ray.log.level': 'debug' | 'info' | 'warning' | 'error' | 'none';
     'log.level': string;
 }
