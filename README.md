@@ -18,12 +18,6 @@ The project is not allowed for illegal intention
 
 ## Installation
 
-1. Install yar2v
-
-```
-npm i -g yar2v
-```
-
 ## Usage
 
 1. Execute `yar2v` in terminal
