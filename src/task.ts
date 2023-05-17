@@ -227,7 +227,7 @@ export async function selectServer(id: string) {
 }
 
 let isCheckingConnection = false;
-export function checkConnection(print2console = false): Promise<void> {
+export async function checkConnection(print2console = false): Promise<void> {
     const cclog = (print2console ? cslogger : logger).child({
         module: 'Connection',
     });
@@ -235,6 +235,11 @@ export function checkConnection(print2console = false): Promise<void> {
     if (isCheckingConnection) {
         cclog.warn('The connection checking is in progress');
         return Promise.resolve();
+    }
+    try {
+        await axios.get('https://bing.com');
+    } catch (e) {
+        throw new Error(`Invalid Network: ${e}`);
     }
 
     return new Promise((resolve) => {
