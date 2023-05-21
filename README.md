@@ -8,8 +8,8 @@ The project is not allowed for illegal intention
 
 ## Features
 
--   Auto pull from subscribed address
--   Auto check servers are able to connect to google.com
+-   Auto pulling servers from subscribed address
+-   Auto checking server availablility
 
 ## Requirement
 
@@ -18,12 +18,9 @@ The project is not allowed for illegal intention
 
 ## Installation
 
-## Usage
-
-1. Execute `yar2v` in terminal
-2. If you are first to start it, select `Subscribe` to pull servers, and select `Check Ability` to check those servers are available or not. `Subscribe`, and `Check Ability` auto run periodically, you can also run them manually.
-3. Select `Proxy Address` to show proxy settings
-4. Configure your app to connect to the proxy server
+```
+pnpm install; npm run build; npm run dev
+```
 
 ## References
 
@@ -34,6 +31,4 @@ The project is not allowed for illegal intention
 -   https://github.com/Loyalsoldier/v2ray-rules-dat
 
 ## TODO
-
--   check selected server every minute -> if unavailable, check all and select fatest server
 
