@@ -234,12 +234,13 @@ export async function checkConnection(print2console = false): Promise<void> {
     cclog.info('Check connection');
     if (isCheckingConnection) {
         cclog.warn('The connection checking is in progress');
-        return Promise.resolve();
+        return;
     }
     try {
         await axios.get('https://bing.com');
     } catch (e) {
-        throw new Error(`Invalid Network: ${e}`);
+        cclog.warn(`Invalid Network: ${e}`);
+        return;
     }
 
     return new Promise((resolve) => {
