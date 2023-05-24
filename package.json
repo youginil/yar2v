@@ -7,7 +7,7 @@
         "yar2v": "dist/main.js"
     },
     "scripts": {
-        "dev": "node dist/main.js",
+        "dev": "node --http-parser=legacy dist/main.js",
         "build": "rollup -c rollup.config.js"
     },
     "type": "module",
