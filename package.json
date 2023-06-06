@@ -3,14 +3,11 @@
     "version": "1.0.0",
     "description": "",
     "main": "dist/main.js",
-    "bin": {
-        "yar2v": "dist/main.js"
-    },
     "scripts": {
-        "dev": "node dist/main.js",
-        "build": "rollup -c rollup.config.js"
+        "dev": "npm run build; electron .",
+        "build": "rollup -c rollup.config.js --bundleConfigAsCjs",
+        "dist": "npm run build && electron-builder"
     },
-    "type": "module",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/youginil/yar2v.git"
@@ -26,18 +23,49 @@
     "homepage": "https://github.com/youginil/yar2v#readme",
     "devDependencies": {
         "@rollup/plugin-typescript": "^11.1.1",
-        "@types/inquirer": "^9.0.3",
         "@types/node": "^20.2.5",
+        "electron": "^25.0.1",
+        "electron-builder": "^23.6.0",
         "prettier": "^2.8.8",
         "rollup": "^3.23.0",
+        "tslib": "^2.5.3",
         "typescript": "^5.1.3"
     },
     "dependencies": {
         "ajv": "^8.12.0",
         "axios": "^1.4.0",
         "https-proxy-agent": "^7.0.0",
-        "inquirer": "^9.2.6",
         "winston": "^3.9.0",
         "winston-daily-rotate-file": "^4.7.1"
+    },
+    "build": {
+        "appId": "com.youginil.yar2v",
+        "productName": "Yar2v",
+        "directories": {
+            "output": "out"
+        },
+        "mac": {
+            "category": "public.app-category.utilities",
+            "icon": "public/logo.png",
+            "target": "zip"
+        },
+        "linux": {
+            "category": "Education",
+            "icon": "public/logo.png"
+        },
+        "win": {
+            "icon": "public/logo.ico"
+        },
+        "nsis": {
+            "oneClick": false
+        },
+        "files": [
+            "./public",
+            "./dist"
+        ],
+        "extraResources": [
+            "v2ray"
+        ]
     }
 }
+

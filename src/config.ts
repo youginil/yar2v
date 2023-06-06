@@ -2,7 +2,7 @@ import Ajv, { JSONSchemaType } from 'ajv';
 import path from 'path';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import { DataDir } from './constants';
+import { app } from 'electron';
 
 const Server: JSONSchemaType<Server> = {
     type: 'object',
@@ -151,7 +151,7 @@ const validate = new Ajv({
 // @ts-ignore
 let config: Configuration = {};
 
-const cfgfile = path.join(DataDir, 'yar2v.json');
+const cfgfile = path.join(app.getPath('userData'), 'yar2v.json');
 
 export async function saveConfig() {
     await fs.writeFile(cfgfile, JSON.stringify(config));

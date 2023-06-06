@@ -3,14 +3,10 @@ import logger, { todologger } from './logger';
 import { exec, ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
-import {
-    DataDir,
-    HttpInboundTag,
-    OutboundTag,
-    SockInboundTag,
-} from './constants';
+import { HttpInboundTag, OutboundTag, SockInboundTag } from './constants';
 import path from 'path';
 import { getConfig } from './config';
+import { app } from 'electron';
 
 type Parser = (url: string) => { name: string; host: string; ob: Outbound };
 
@@ -195,7 +191,7 @@ export function parseURL(url: string): V2rayConfig | undefined {
     todologger.warn(`Unknown URL: ${url}`);
 }
 
-const v2ray = path.join(DataDir, 'v2ray');
+const v2ray = path.resolve(app.getAppPath(), '../v2ray');
 
 export class V2ray {
     private name: string;
@@ -327,14 +323,13 @@ export class V2ray {
             'api',
             'adi',
             this.serverParam,
-            file
+            '"' + file + '"'
         );
         if (stdout) {
             this.logger.info(stdout);
         }
         if (stderr) {
             this.logger.error(stderr);
-            throw new Error(stderr);
         }
     }
 
@@ -354,7 +349,6 @@ export class V2ray {
         }
         if (stderr) {
             this.logger.error(stderr);
-            throw new Error(stderr);
         }
     }
 
@@ -367,14 +361,13 @@ export class V2ray {
             'api',
             'ado',
             this.serverParam,
-            file
+            '"' + file + '"'
         );
         if (stdout) {
             this.logger.info(stdout);
         }
         if (stderr) {
             this.logger.error(stderr);
-            throw new Error(stderr);
         }
     }
 
@@ -394,7 +387,6 @@ export class V2ray {
         }
         if (stderr) {
             this.logger.error(stderr);
-            throw new Error(stderr);
         }
     }
 }

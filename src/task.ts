@@ -8,16 +8,16 @@ import {
     setConfig,
 } from './config';
 import { V2ray, parseURL } from './v2ray';
-import logger, { cslogger, todologger } from './logger';
+import logger, { todologger } from './logger';
 import path from 'path';
 import {
-    DataDir,
     HttpInboundTag,
     MaxTesting,
     OutboundTag,
     SockInboundTag,
     TestingTagPrefix,
 } from './constants';
+import { app } from 'electron';
 
 function generateServerID() {
     return Date.now() + '-' + Math.random();
@@ -42,19 +42,21 @@ export async function importConfig(url: string) {
     await saveConfig();
 }
 
-let isUpdatingFromSub = false;
-export async function updateSubServers(print2console = false) {
-    const uplog = (print2console ? cslogger : logger).child({
+let isUpdating = false;
+
+export async function updateSubServers() {
+    const uplog = logger.child({
         module: 'subscribe',
     });
     uplog.info('Start updating servers...');
 
-    if (isUpdatingFromSub) {
+    if (isUpdating) {
         uplog.warn(
             'Updating servers from subscribe srouce is in progress, please wait...'
         );
-        return false;
+        return;
     }
+    isUpdating = true;
     const urls = getConfig('subscribe');
     await Promise.allSettled(
         urls.map(async (url) => {
@@ -98,6 +100,7 @@ export async function updateSubServers(print2console = false) {
         })
     );
     await saveConfig();
+    isUpdating = false;
 }
 
 let subTimer: NodeJS.Timer | null = null;
@@ -143,10 +146,10 @@ export function addUserConfig(url: string): string | undefined {
     });
 }
 
-const v2mainCfgfile = path.join(DataDir, 'v2ray.main.json');
+const v2mainCfgfile = path.join(app.getPath('userData'), 'v2ray.main.json');
 let v2main: V2ray;
 
-const v2testCfgfile = path.join(DataDir, 'v2ray.test.json');
+const v2testCfgfile = path.join(app.getPath('userData'), 'v2ray.test.json');
 let v2test: V2ray;
 
 export async function startV2ray() {
@@ -227,8 +230,10 @@ export async function selectServer(id: string) {
 }
 
 let isCheckingConnection = false;
-export async function checkConnection(print2console = false): Promise<void> {
-    const cclog = (print2console ? cslogger : logger).child({
+
+
+export async function checkConnection(): Promise<void> {
+    const cclog = logger.child({
         module: 'Connection',
     });
     cclog.info('Check connection');
@@ -242,6 +247,8 @@ export async function checkConnection(print2console = false): Promise<void> {
         cclog.warn(`Invalid Network: ${e}`);
         return;
     }
+
+    isCheckingConnection = true
 
     return new Promise((resolve) => {
         const { userServers, subServers } = getAllServers();
@@ -259,7 +266,10 @@ export async function checkConnection(print2console = false): Promise<void> {
             try {
                 const cfg: V2rayConfig = JSON.parse(server.cfg);
                 cfg.outbounds[0].tag = tag;
-                const cfgfile = path.join(DataDir, tag + '.json');
+                const cfgfile = path.join(
+                    app.getPath('userData'),
+                    tag + '.json'
+                );
                 await v2test.addOutbound(cfg, cfgfile);
                 while (true) {
                     try {
@@ -297,6 +307,7 @@ export async function checkConnection(print2console = false): Promise<void> {
                 server.conn = dt;
                 server.connFails = 0;
             } catch (e) {
+                cclog.error(e.toString());
                 server.conn = -1;
                 server.connFails++;
             } finally {

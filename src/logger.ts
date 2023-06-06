@@ -1,6 +1,8 @@
+import { app } from 'electron';
 import { createLogger, format, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { DataDir } from './constants';
+
+const LogDir = app.getPath('logs');
 
 const logger = createLogger({
     level: 'debug',
@@ -10,26 +12,10 @@ const logger = createLogger({
     ),
     transports: [
         new DailyRotateFile({
-            dirname: DataDir,
+            dirname: LogDir,
             filename: 'log',
         }),
     ],
-});
-
-export const cslogger = createLogger({
-    level: 'debug',
-    format: format.combine(
-        format.align(),
-        format.colorize(),
-        format.printf((info) => {
-            return `${info.level} [${info.module ?? 'Global'}] ${
-                typeof info.message === 'object'
-                    ? JSON.stringify(info.message)
-                    : info.message
-            }`;
-        })
-    ),
-    transports: [new transports.Console()],
 });
 
 export const todologger = createLogger({
@@ -38,12 +24,11 @@ export const todologger = createLogger({
         format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         format.json()
     ),
-    transports: [new transports.File({ filename: 'todo', dirname: DataDir })],
+    transports: [new transports.File({ filename: 'todo', dirname: LogDir })],
 });
 
 export function setLoggerLevel(level: string) {
     logger.level = level;
-    cslogger.level = level;
 }
 
 export default logger;
