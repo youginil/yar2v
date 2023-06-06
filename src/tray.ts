@@ -40,29 +40,19 @@ export function buildTrayMenu() {
     const usids = userServers.map((item) => item.id);
     const servers = [...userServers, ...subServers];
     const protocols: string[] = [];
-    let connMaxLen = 0;
-    let connFailsMaxLen = 0;
-    let protocolMaxLen = 0;
     for (let i = 0; i < servers.length; i++) {
         const server = servers[i];
-        connMaxLen = Math.max(connMaxLen, server.conn.toString().length);
-        connFailsMaxLen = Math.max(
-            connFailsMaxLen,
-            server.connFails.toString().length
-        );
         const m = server.url.match(/^([^:]+):\/\//);
         const protocol = m ? m[1] : '';
         protocols.push(protocol);
-        protocolMaxLen = Math.max(protocolMaxLen, protocol.length);
     }
     const choices: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] =
         servers.sort(compareServer).map((server, idx) => ({
             label: [
                 usids.includes(server.id) ? 'U' : 'S',
-                server.conn.toString().padStart(connMaxLen, ' ') + 'ms',
+                server.conn + 'ms',
                 ts2str(server.connTime),
-                server.connFails.toString().padStart(connFailsMaxLen, ' '),
-                protocols[idx].padStart(protocolMaxLen, ' '),
+                protocols[idx],
                 server.name,
             ].join(' '),
             type: 'radio',
@@ -75,7 +65,7 @@ export function buildTrayMenu() {
 
     const menu = Menu.buildFromTemplate([
         {
-            label: 'Servers',
+            label: 'Servers' + ' (' + servers.length + ')',
             type: 'submenu',
             submenu: Menu.buildFromTemplate(choices),
         },
