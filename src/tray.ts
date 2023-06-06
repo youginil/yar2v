@@ -69,6 +69,7 @@ export function buildTrayMenu() {
             checked: server.id === curID,
             async click() {
                 await selectServer(server.id);
+                buildTrayMenu();
             },
         }));
 

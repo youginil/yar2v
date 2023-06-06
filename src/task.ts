@@ -18,6 +18,7 @@ import {
     TestingTagPrefix,
 } from './constants';
 import { app } from 'electron';
+import { buildTrayMenu } from './tray';
 
 function generateServerID() {
     return Date.now() + '-' + Math.random();
@@ -101,6 +102,7 @@ export async function updateSubServers() {
     );
     await saveConfig();
     isUpdating = false;
+    buildTrayMenu();
 }
 
 let subTimer: NodeJS.Timer | null = null;
@@ -321,6 +323,7 @@ export async function checkConnection(): Promise<void> {
                     isCheckingConnection = false;
                     await rmFailedServers(false);
                     await saveConfig();
+                    buildTrayMenu();
                     resolve();
                 }
                 return;
