@@ -1,6 +1,6 @@
 # yar2v
 
-V2ray CLI client
+V2ray client
 
 ## Warning!!!
 
@@ -11,17 +11,6 @@ The project is not allowed for illegal intention
 -   Auto pulling servers from subscribed address
 -   Auto checking server availablility
 
-## Requirement
-
--   NodeJS
--   v2ray in `~/.yar2v/`
-
-## Installation
-
-```
-pnpm install; npm run build; npm run dev
-```
-
 ## References
 
 -   https://www.v2fly.org/
@@ -29,6 +18,4 @@ pnpm install; npm run build; npm run dev
 -   https://github.com/yanue/V2rayU
 -   https://github.com/2dust/v2rayN/wiki
 -   https://github.com/Loyalsoldier/v2ray-rules-dat
-
-## TODO
 
