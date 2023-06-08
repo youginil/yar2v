@@ -191,7 +191,10 @@ export function parseURL(url: string): V2rayConfig | undefined {
     todologger.warn(`Unknown URL: ${url}`);
 }
 
-const v2ray = path.resolve(app.getAppPath(), '../v2ray');
+const v2ray = path.resolve(
+    app.getAppPath(),
+    app.isPackaged ? '../v2ray' : 'v2ray'
+);
 
 export class V2ray {
     private name: string;

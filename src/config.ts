@@ -151,15 +151,15 @@ const validate = new Ajv({
 // @ts-ignore
 let config: Configuration = {};
 
-const cfgfile = path.join(app.getPath('userData'), 'yar2v.json');
+export const CFG_FILE = path.join(app.getPath('userData'), 'yar2v.json');
 
 export async function saveConfig() {
-    await fs.writeFile(cfgfile, JSON.stringify(config));
+    await fs.writeFile(CFG_FILE, JSON.stringify(config));
 }
 
 export async function loadConfig() {
-    if (existsSync(cfgfile)) {
-        const content = (await fs.readFile(cfgfile)).toString();
+    if (existsSync(CFG_FILE)) {
+        const content = (await fs.readFile(CFG_FILE)).toString();
         const data = JSON.parse(content);
         if (!validate(data)) {
             throw new Error(JSON.stringify(validate.errors));

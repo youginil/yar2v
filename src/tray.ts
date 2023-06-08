@@ -1,6 +1,6 @@
-import { Menu, Tray, app, clipboard } from 'electron';
+import { Menu, Tray, app, clipboard, shell } from 'electron';
 import path from 'path';
-import { getAllServers, getConfig } from './config';
+import { CFG_FILE, getAllServers, getConfig } from './config';
 import { checkConnection, selectServer, updateSubServers } from './task';
 
 let tray: Tray;
@@ -65,9 +65,12 @@ export function buildTrayMenu() {
 
     const menu = Menu.buildFromTemplate([
         {
-            label: 'Servers' + ' (' + servers.length + ')',
+            label: 'Servers' + ' - ' + servers.length,
             type: 'submenu',
             submenu: Menu.buildFromTemplate(choices),
+        },
+        {
+            type: 'separator',
         },
         {
             label: 'Subscribe',
@@ -90,6 +93,12 @@ export function buildTrayMenu() {
                 const sockPort = getConfig('main.sock.port');
                 const proxy = `export http_proxy=http://${httpHost}:${httpPort};export https_proxy=http://${httpHost}:${httpPort};export ALL_PROXY=socks5://${sockHost}:${sockPort}`;
                 clipboard.writeText(proxy);
+            },
+        },
+        {
+            label: 'Settings - yar2v.json',
+            click() {
+                shell.showItemInFolder(CFG_FILE);
             },
         },
         {
