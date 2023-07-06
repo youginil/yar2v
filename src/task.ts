@@ -1,4 +1,5 @@
 import axios from 'axios';
+import https from 'https';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import {
     getAllServers,
@@ -62,7 +63,9 @@ export async function updateSubServers() {
     await Promise.allSettled(
         urls.map(async (url) => {
             return axios
-                .get(url)
+                .get(url, {
+                    httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+                })
                 .then(async (r) => {
                     uplog.info(`Subscribe from ${url}`);
                     const { userServers, subServers } = getAllServers();
@@ -233,7 +236,6 @@ export async function selectServer(id: string) {
 
 let isCheckingConnection = false;
 
-
 export async function checkConnection(): Promise<void> {
     const cclog = logger.child({
         module: 'Connection',
@@ -250,7 +252,7 @@ export async function checkConnection(): Promise<void> {
         return;
     }
 
-    isCheckingConnection = true
+    isCheckingConnection = true;
 
     return new Promise((resolve) => {
         const { userServers, subServers } = getAllServers();
